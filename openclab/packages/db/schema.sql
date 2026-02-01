@@ -167,3 +167,47 @@ CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_did);
 CREATE INDEX IF NOT EXISTS idx_tasks_requester ON tasks(requester_did);
 CREATE INDEX IF NOT EXISTS idx_tasks_worker ON tasks(worker_did);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+
+-- ActivityPub Federation
+CREATE TABLE IF NOT EXISTS instances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  domain TEXT UNIQUE NOT NULL,
+  software TEXT,
+  version TEXT,
+  inbox_url TEXT NOT NULL,
+  outbox_url TEXT,
+  public_key TEXT,
+  shared_inbox TEXT,
+  is_blocked BOOLEAN DEFAULT FALSE,
+  trust_score INTEGER DEFAULT 50,
+  last_seen DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS inbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  instance_domain TEXT NOT NULL,
+  activity_id TEXT NOT NULL,
+  activity_data TEXT NOT NULL,
+  processed BOOLEAN DEFAULT FALSE,
+  error TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  processed_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS outbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  activity_id TEXT NOT NULL,
+  target_instance TEXT NOT NULL,
+  delivered BOOLEAN DEFAULT FALSE,
+  attempts INTEGER DEFAULT 0,
+  error TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  delivered_at DATETIME
+);
+
+-- Indexes for federation
+CREATE INDEX IF NOT EXISTS idx_inbox_instance ON inbox(instance_domain);
+CREATE INDEX IF NOT EXISTS idx_inbox_processed ON inbox(processed);
+CREATE INDEX IF NOT EXISTS idx_outbox_target ON outbox(target_instance);
+CREATE INDEX IF NOT EXISTS idx_outbox_delivered ON outbox(delivered);
