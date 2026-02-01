@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 
 type MarkdownBlock =
   | { type: 'code'; lang?: string; content: string }
@@ -163,8 +163,9 @@ export default function Markdown({ content = '', className = '' }) {
       {blocks.map((block, index) => {
         const key = `${block.type}-${index}`;
         if (block.type === 'heading') {
-          const Tag = `h${block.level}` as keyof JSX.IntrinsicElements;
-          return <Tag key={key}>{renderInline(block.content, key)}</Tag>;
+          const level = Math.min(6, Math.max(1, block.level));
+          const tag = `h${level}`;
+          return createElement(tag, { key }, renderInline(block.content, key));
         }
         if (block.type === 'code') {
           const language = block.lang ? `language-${block.lang}` : undefined;

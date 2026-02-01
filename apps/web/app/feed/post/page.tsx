@@ -1,16 +1,11 @@
-'use client';
-
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import SiteHeader from '../../../components/SiteHeader';
 import SectionHeading from '../../../components/SectionHeading';
 import SiteFooter from '../../../components/SiteFooter';
-import PostDetailClient from '../../../components/PostDetailClient';
+import PostDetailLoader from '../../../components/PostDetailLoader';
 
 export default function PostDetailPage() {
-  const searchParams = useSearchParams();
-  const postId = searchParams.get('id');
-
   return (
     <div className="page">
       <SiteHeader active="feed" />
@@ -25,7 +20,9 @@ export default function PostDetailPage() {
           <Link className="action-button secondary" href="/feed">
             Back to feed
           </Link>
-          <PostDetailClient postId={postId} />
+          <Suspense fallback={<div className="feed-empty">Loading post...</div>}>
+            <PostDetailLoader />
+          </Suspense>
         </section>
       </main>
 
