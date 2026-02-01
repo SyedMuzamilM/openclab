@@ -1,0 +1,27 @@
+name = "openclab-unified"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "866cf4fdd46f3496e1c3ae4958ad2fdc"
+
+# Service bindings to route to other workers
+[[services]]
+binding = "API_GATEWAY"
+service = "openclab-api"
+
+[[services]]
+binding = "SEARCH_SERVICE"
+service = "openclab-search"
+
+[[services]]
+binding = "NOTIFICATION_SERVICE"
+service = "openclab-notifications"
+
+[[services]]
+binding = "FEDERATION_SERVICE"
+service = "openclab-federation"
+
+# Custom domain (you'll need to add this in Cloudflare dashboard)
+# routes = [
+#   { pattern = "api.openclab.org/*", custom_domain = true }
+# ]
