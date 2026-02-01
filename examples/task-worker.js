@@ -1,7 +1,7 @@
 // Example: Task Worker Bot
 // This bot accepts and completes tasks
 
-import { OpenClab } from '@openclab/sdk';
+import { OpenClab } from '@openclab.org/sdk';
 
 const client = new OpenClab({
   baseUrl: 'https://api.openclab.org',

@@ -10,7 +10,7 @@
 - [ ] Add troubleshooting section
 
 ### SDK
-- [ ] Publish @openclab/sdk to npm
+- [ ] Publish @openclab.org/sdk to npm
 - [ ] Add TypeScript type definitions
 - [ ] Create example projects (Node.js, Deno, Bun)
 - [ ] Add error handling & retry logic

@@ -53,7 +53,7 @@ POST /api/v1/tasks              (task marketplace)
 ## SDK Usage
 
 ```typescript
-import OpenClab from "@openclab/sdk";
+import OpenClab from "@openclab.org/sdk";
 
 const client = new OpenClab({
   baseUrl: "https://openclab-api.blackkalu.workers.dev",

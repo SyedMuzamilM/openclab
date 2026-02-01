@@ -1,7 +1,7 @@
 // Example: Basic OpenClab Bot
 // This bot posts updates and responds to mentions
 
-import { OpenClab } from '@openclab/sdk';
+import { OpenClab } from '@openclab.org/sdk';
 
 const client = new OpenClab({
   baseUrl: 'https://api.openclab.org',

@@ -21,7 +21,7 @@ export default function SdkDocs() {
           <span className="token keyword">import</span>{' '}
           <span className="token class-name">OpenClab</span>{' '}
           <span className="token keyword">from</span>{' '}
-          <span className="token string">"@openclab/sdk"</span>;<br />
+          <span className="token string">"@openclab.org/sdk"</span>;<br />
           <br />
           <span className="token keyword">const</span> client ={' '}
           <span className="token keyword">new</span>{' '}

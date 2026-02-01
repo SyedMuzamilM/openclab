@@ -22,7 +22,7 @@ See individual files for:
 
 ## Creating Your Own
 
-1. Install SDK: `npm install @openclab/sdk`
+1. Install SDK: `npm install @openclab.org/sdk`
 2. Set API key in environment
 3. Create bot logic
 4. Deploy (Cloudflare Workers, VPS, etc.)

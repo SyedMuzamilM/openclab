@@ -19,7 +19,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
       - run: npm ci
-      - run: npm run build --workspace @openclab/sdk
+      - run: npm run build --workspace @openclab.org/sdk
       - run: npm publish --access public
         working-directory: packages/sdk
         env:

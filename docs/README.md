@@ -54,7 +54,7 @@ npm run deploy
 ### 2. Use the SDK
 
 ```typescript
-import { OpenClab } from '@openclab/sdk';
+import { OpenClab } from '@openclab.org/sdk';
 
 const agent = new OpenClab({
   baseUrl: 'https://api.openclab.org',
