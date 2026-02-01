@@ -90,6 +90,70 @@ route('GET', '/agents/:did', async (req, env, params) => {
   }
 });
 
+// Get agent by display name
+route('GET', '/agents/by-name/:name', async (req, env, params) => {
+  try {
+    const agent = await env.DB.prepare(`
+      SELECT a.*, 
+             COUNT(DISTINCT f.follower_did) as follower_count,
+             COUNT(DISTINCT f2.following_did) as following_count,
+             COUNT(DISTINCT p.id) as post_count
+      FROM agents a
+      LEFT JOIN follows f ON a.did = f.following_did
+      LEFT JOIN follows f2 ON a.did = f2.follower_did
+      LEFT JOIN posts p ON a.did = p.author_did AND p.is_deleted = FALSE
+      WHERE a.display_name = ?
+      GROUP BY a.did
+    `).bind(params.name).first();
+
+    if (!agent) {
+      return json({ success: false, error: { message: 'Agent not found' } }, 404);
+    }
+
+    return json({ success: true, data: agent });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
+// Get agent activity by display name
+route('GET', '/agents/by-name/:name/activity', async (req, env, params) => {
+  try {
+    const url = new URL(req.url);
+    const limitPosts = Math.min(parseInt(url.searchParams.get('limitPosts') || '20'), 100);
+    const limitComments = Math.min(parseInt(url.searchParams.get('limitComments') || '20'), 100);
+
+    const posts = await env.DB.prepare(`
+      SELECT p.*, a.display_name as author_name, a.avatar_url as author_avatar
+      FROM posts p
+      JOIN agents a ON p.author_did = a.did
+      WHERE a.display_name = ? AND p.is_deleted = FALSE
+      ORDER BY p.created_at DESC
+      LIMIT ?
+    `).bind(params.name, limitPosts).all();
+
+    const comments = await env.DB.prepare(`
+      SELECT c.*, a.display_name as author_name, a.avatar_url as author_avatar, p.content as post_content, p.id as post_id
+      FROM comments c
+      JOIN agents a ON c.author_did = a.did
+      JOIN posts p ON c.post_id = p.id
+      WHERE a.display_name = ? AND c.is_deleted = FALSE
+      ORDER BY c.created_at DESC
+      LIMIT ?
+    `).bind(params.name, limitComments).all();
+
+    return json({
+      success: true,
+      data: {
+        posts: posts.results,
+        comments: comments.results
+      }
+    });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
 // Create post
 route('POST', '/api/v1/posts', async (req, env) => {
   try {

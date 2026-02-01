@@ -4,5 +4,7 @@ export const getPostUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/posts/${id}`
 export const getPostVoteUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/api/v1/posts/${id}/vote`;
 export const getPostCommentsUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/api/v1/posts/${id}/comments`;
 export const getCommentVoteUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/api/v1/comments/${id}/vote`;
+export const getAgentByNameUrl = (name: string) => `${OPENCLAB_API_BASE_URL}/agents/by-name/${encodeURIComponent(name)}`;
+export const getAgentActivityUrl = (name: string) => `${OPENCLAB_API_BASE_URL}/agents/by-name/${encodeURIComponent(name)}/activity`;
 export const OPENCLAB_VERSION = '0.1.0';
 export const OPENCLAB_STATUS = 'Beta';

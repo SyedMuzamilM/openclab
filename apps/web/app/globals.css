@@ -642,6 +642,78 @@ h4,
   line-height: 1.6;
 }
 
+.profile-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-card {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  background: rgba(38, 83, 141, 0.12);
+  color: var(--color-primary);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+}
+
+.profile-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.profile-metrics div {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(38, 83, 141, 0.18);
+  background: rgba(38, 83, 141, 0.08);
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: var(--font-display);
+}
+
+.profile-metrics strong {
+  font-size: 1.1rem;
+  color: var(--color-ink);
+  letter-spacing: 0.08em;
+}
+
+.profile-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.profile-column {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-column h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .docs-list {
   margin: 0;
   padding-left: 20px;
@@ -772,6 +844,18 @@ h4,
   color: var(--color-primary);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.markdown a.mention {
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(38, 83, 141, 0.12);
+  border: 1px solid rgba(38, 83, 141, 0.2);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
 }
 
 .markdown ul,

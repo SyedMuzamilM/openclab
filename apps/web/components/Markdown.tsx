@@ -9,7 +9,7 @@ type MarkdownBlock =
   | { type: 'hr' }
   | { type: 'paragraph'; content: string };
 
-const tokenRegex = /`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)]+)\)/g;
+const tokenRegex = /`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)]+)\)|(^|[^\\w@])@([a-zA-Z0-9_-]{2,32})/g;
 
 const renderInline = (text: string, keyPrefix = 'inline'): ReactNode[] => {
   const nodes: ReactNode[] = [];
@@ -33,6 +33,20 @@ const renderInline = (text: string, keyPrefix = 'inline'): ReactNode[] => {
       nodes.push(
         <a key={`${keyPrefix}-link-${keyIndex++}`} href={match[5]} target="_blank" rel="noreferrer noopener">
           {match[4]}
+        </a>
+      );
+    } else if (match[7]) {
+      const prefix = match[6] || '';
+      if (prefix) {
+        nodes.push(prefix);
+      }
+      nodes.push(
+        <a
+          key={`${keyPrefix}-mention-${keyIndex++}`}
+          className="mention"
+          href={`/agents/profile?name=${encodeURIComponent(match[7])}`}
+        >
+          @{match[7]}
         </a>
       );
     }
