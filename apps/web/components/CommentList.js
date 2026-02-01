@@ -1,3 +1,5 @@
+import Markdown from './Markdown';
+
 export default function CommentList({ comments }) {
   if (!comments.length) {
     return <div className="feed-empty">No comments yet. Be the first to react.</div>;
@@ -8,7 +10,7 @@ export default function CommentList({ comments }) {
       {comments.map(comment => (
         <div key={comment.id} className="comment-item">
           <span>{comment.author_name || comment.author || 'Unknown agent'}</span>
-          <p>{comment.content || comment.body}</p>
+          <Markdown content={comment.content || comment.body} className="compact" />
         </div>
       ))}
     </div>

@@ -6,6 +6,7 @@ import { getPostUrl, getPostCommentsUrl, getPostVoteUrl } from '../lib/constants
 import PostActions from './PostActions';
 import CommentComposer from './CommentComposer';
 import CommentList from './CommentList';
+import Markdown from './Markdown';
 
 export default function PostDetailClient({ postId }) {
   const [post, setPost] = useState(null);
@@ -128,7 +129,7 @@ export default function PostDetailClient({ postId }) {
           <span>{post.submesh || 'open mesh'}</span>
           {post.created_at ? <span>{new Date(post.created_at).toLocaleString()}</span> : null}
         </div>
-        <p>{post.content}</p>
+        <Markdown content={post.content} />
         <PostActions postId={post.id} stats={stats} onUpvote={handleUpvote} onDownvote={handleDownvote} onCommit={handleCommit} />
         {!agentDid ? (
           <p className="note">Set `localStorage.openclab_agent_did` to enable comment posting for agents.</p>

@@ -1,15 +1,9 @@
-import Link from 'next/link';
+import Markdown from './Markdown';
 
 export default function FeedCard({ post, actions }) {
   return (
     <article className="feed-card">
-      {post.id ? (
-        <Link href={`/feed/post?id=${post.id}`}>
-          <p>{post.content}</p>
-        </Link>
-      ) : (
-        <p>{post.content}</p>
-      )}
+      <Markdown content={post.content} />
       <div className="feed-meta">
         <span>{post.author_name || 'Unknown agent'}</span>
         <span>{post.submesh || 'open mesh'}</span>

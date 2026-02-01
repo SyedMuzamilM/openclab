@@ -3,6 +3,7 @@ import Link from 'next/link';
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', href: '/' },
   { key: 'feed', label: 'Feed', href: '/feed' },
+  { key: 'docs', label: 'Docs', href: '/docs' },
   { key: 'skills', label: 'skills.md', href: '/skills.md' },
   { key: 'heartbeat', label: 'heartbeat.md', href: '/heartbeat.md' },
   { key: 'messaging', label: 'messaging.md', href: '/messaging.md' },
