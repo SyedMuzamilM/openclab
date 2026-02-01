@@ -189,6 +189,103 @@ route('GET', '/posts/:id', async (req, env, params) => {
   }
 });
 
+// Create comment
+route('POST', '/api/v1/posts/:id/comments', async (req, env, params) => {
+  try {
+    const body = await req.json() as { content: string; parentId?: string; authorDid?: string };
+    const { content, parentId } = body;
+    const authorDid = req.headers.get('X-Agent-DID') || body.authorDid;
+
+    if (!authorDid) {
+      return json({ success: false, error: { message: 'X-Agent-DID or authorDid is required' } }, 400);
+    }
+
+    if (!content) {
+      return json({ success: false, error: { message: 'Content is required' } }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    await env.DB.prepare(`
+      INSERT INTO comments (id, post_id, author_did, content, parent_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).bind(id, params.id, authorDid, content, parentId || null).run();
+
+    await env.DB.prepare(`
+      UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?
+    `).bind(params.id).run();
+
+    const comment = await env.DB.prepare(`
+      SELECT c.*, a.display_name as author_name, a.avatar_url as author_avatar
+      FROM comments c
+      LEFT JOIN agents a ON c.author_did = a.did
+      WHERE c.id = ?
+    `).bind(id).first();
+
+    return json({ success: true, data: comment }, 201);
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
+// Get comments for a post
+route('GET', '/api/v1/posts/:id/comments', async (req, env, params) => {
+  try {
+    const url = new URL(req.url);
+    const sort = url.searchParams.get('sort') || 'new';
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+
+    let orderBy = 'c.created_at DESC';
+    if (sort === 'top') {
+      orderBy = '(c.upvotes - c.downvotes) DESC';
+    }
+
+    const comments = await env.DB.prepare(`
+      SELECT c.*, a.display_name as author_name, a.avatar_url as author_avatar
+      FROM comments c
+      LEFT JOIN agents a ON c.author_did = a.did
+      WHERE c.post_id = ? AND c.is_deleted = FALSE
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `).bind(params.id, limit, offset).all();
+
+    return json({ success: true, data: comments.results, meta: { sort, limit, offset } });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
+// Vote on comment
+route('POST', '/api/v1/comments/:id/vote', async (req, env, params) => {
+  try {
+    const body = await req.json() as { value: number };
+    const { value } = body;
+    const voterDid = req.headers.get('X-Agent-DID') || 'anonymous';
+
+    await env.DB.prepare(`
+      INSERT INTO votes (target_type, target_id, voter_did, value, created_at)
+      VALUES ('comment', ?, ?, ?, datetime('now'))
+      ON CONFLICT(target_type, target_id, voter_did) DO UPDATE SET value = excluded.value
+    `).bind(params.id, voterDid, value).run();
+
+    const voteCounts = await env.DB.prepare(`
+      SELECT 
+        SUM(CASE WHEN value = 1 THEN 1 ELSE 0 END) as upvotes,
+        SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END) as downvotes
+      FROM votes
+      WHERE target_type = 'comment' AND target_id = ?
+    `).bind(params.id).first();
+
+    await env.DB.prepare(`
+      UPDATE comments SET upvotes = ?, downvotes = ? WHERE id = ?
+    `).bind(voteCounts?.upvotes || 0, voteCounts?.downvotes || 0, params.id).run();
+
+    return json({ success: true, message: 'Vote recorded' });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
 // Vote on post
 route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
   try {
