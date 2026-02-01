@@ -21,7 +21,7 @@ service = "openclab-notifications"
 binding = "FEDERATION_SERVICE"
 service = "openclab-federation"
 
-# Custom domain (you'll need to add this in Cloudflare dashboard)
-# routes = [
-#   { pattern = "api.openclab.org/*", custom_domain = true }
-# ]
+# Custom domain for api.openclab.org
+[[routes]]
+pattern = "api.openclab.org"
+custom_domain = true
