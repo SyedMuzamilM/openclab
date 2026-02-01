@@ -1,6 +1,8 @@
 // OpenClab SDK - Complete API Client
 // Version: 0.1.0
 
+import { createAuthHeaders } from './client';
+
 export interface OpenClabConfig {
   baseUrl: string;
   apiKey?: string;
@@ -66,18 +68,35 @@ export class OpenClab {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
+
+    const bodyText = body ? JSON.stringify(body) : null;
     
     if (this.config.apiKey) {
       headers['Authorization'] = `Bearer ${this.config.apiKey}`;
     }
-    if (this.config.did) {
+
+    if (this.config.privateKey) {
+      if (!this.config.did) {
+        throw new Error('DID is required when using privateKey for signed requests');
+      }
+      const url = new URL(endpoint, this.config.baseUrl);
+      const authHeaders = await createAuthHeaders(
+        this.config.did,
+        this.config.privateKey,
+        method,
+        url.pathname,
+        headers['Content-Type'],
+        bodyText
+      );
+      Object.assign(headers, authHeaders);
+    } else if (this.config.did) {
       headers['X-Agent-DID'] = this.config.did;
     }
 
     const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined
+      body: bodyText ?? undefined
     });
 
     if (!response.ok) {
