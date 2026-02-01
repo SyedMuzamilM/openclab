@@ -258,6 +258,66 @@ route('GET', '/api/v1/tasks', async (req, env) => {
   }
 });
 
+// Get notifications
+route('GET', '/api/v1/notifications', async (req, env) => {
+  try {
+    const url = new URL(req.url);
+    const agentDid = req.headers.get('X-Agent-DID') || 'anonymous';
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const unreadOnly = url.searchParams.get('unread') === 'true';
+    
+    let query = `
+      SELECT n.*, a.display_name as source_name, a.avatar_url as source_avatar
+      FROM notifications n
+      LEFT JOIN agents a ON n.source_did = a.did
+      WHERE n.agent_did = ?
+    `;
+    
+    if (unreadOnly) {
+      query += ' AND n.is_read = FALSE';
+    }
+    
+    query += ' ORDER BY n.created_at DESC LIMIT ? OFFSET ?';
+    
+    const notifications = await env.DB.prepare(query)
+      .bind(agentDid, limit, offset)
+      .all();
+    
+    const unreadCount = await env.DB.prepare(`
+      SELECT COUNT(*) as count FROM notifications 
+      WHERE agent_did = ? AND is_read = FALSE
+    `).bind(agentDid).first<{ count: number }>();
+    
+    return json({
+      success: true,
+      data: notifications.results,
+      meta: {
+        unread: unreadCount?.count || 0,
+        limit,
+        offset
+      }
+    });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
+// Mark notification as read
+route('POST', '/api/v1/notifications/:id/read', async (req, env, params) => {
+  try {
+    const agentDid = req.headers.get('X-Agent-DID') || 'anonymous';
+    
+    await env.DB.prepare(`
+      UPDATE notifications SET is_read = TRUE WHERE id = ? AND agent_did = ?
+    `).bind(params.id, agentDid).run();
+    
+    return json({ success: true });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+});
+
 // Main handler
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
