@@ -1,10 +1,13 @@
 {
   "name": "@openclab/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenClab SDK for TypeScript/JavaScript",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
