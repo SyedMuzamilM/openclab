@@ -6,8 +6,9 @@ import {
   base58Encode,
   createSignaturePayload,
   verifyRequestAuth,
-  generateChallenge
-} from '../../packages/sdk/src/auth';
+  generateChallenge,
+  verifyChallenge
+} from '../../../packages/sdk/src/auth';
 
 interface Env {
   DB: D1Database;
@@ -22,14 +23,14 @@ const CONFIG = {
   RATE_LIMIT_MAX: 100,
   DEFAULT_PAGE_SIZE: 25,
   MAX_PAGE_SIZE: 100,
-  REQUIRE_SIGNATURES: false // Set to true to enforce signature verification
+  REQUIRE_SIGNATURES: true // Set to true to enforce signature verification
 };
 
 // Helper to create JSON response
-const json = (data: unknown, status = 200, headers: Record<string, string> = {}) => 
+const json = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -45,20 +46,20 @@ const checkRateLimit = async (req: Request, env: Env): Promise<{ allowed: boolea
   const key = `rate_limit:${clientId}`;
   const now = Math.floor(Date.now() / 1000);
   const windowStart = Math.floor(now / CONFIG.RATE_LIMIT_WINDOW) * CONFIG.RATE_LIMIT_WINDOW;
-  
+
   const current = await env.RATE_LIMITS.get(`${key}:${windowStart}`);
   const count = current ? parseInt(current) : 0;
-  
+
   if (count >= CONFIG.RATE_LIMIT_MAX) {
     return { allowed: false, remaining: 0, reset: windowStart + CONFIG.RATE_LIMIT_WINDOW };
   }
-  
+
   await env.RATE_LIMITS.put(`${key}:${windowStart}`, (count + 1).toString(), { expirationTtl: CONFIG.RATE_LIMIT_WINDOW * 2 });
-  
-  return { 
-    allowed: true, 
-    remaining: CONFIG.RATE_LIMIT_MAX - count - 1, 
-    reset: windowStart + CONFIG.RATE_LIMIT_WINDOW 
+
+  return {
+    allowed: true,
+    remaining: CONFIG.RATE_LIMIT_MAX - count - 1,
+    reset: windowStart + CONFIG.RATE_LIMIT_WINDOW
   };
 };
 
@@ -76,19 +77,19 @@ const setCached = async (req: Request, response: Response): Promise<void> => {
 // Authentication middleware - verifies DID signatures
 const requireAuth = async (req: Request, env: Env, requireSignature: boolean = false): Promise<{ ok: boolean; response?: Response; did?: string }> => {
   const did = req.headers.get('X-Agent-DID');
-  
+
   if (!did) {
     return { ok: false, response: json({ success: false, error: { message: 'X-Agent-DID header required' } }, 401) };
   }
-  
+
   // Check if agent exists and has a public key
   const agent = await env.DB.prepare('SELECT public_key FROM agents WHERE did = ?')
     .bind(did).first<{ public_key: string }>();
-  
+
   if (!agent) {
     return { ok: false, response: json({ success: false, error: { message: 'Agent not found' } }, 404) };
   }
-  
+
   // If agent has a public key, verify signature
   if (agent.public_key && (requireSignature || CONFIG.REQUIRE_SIGNATURES)) {
     // Clone request to avoid consuming body
@@ -98,7 +99,7 @@ const requireAuth = async (req: Request, env: Env, requireSignature: boolean = f
     }
     return { ok: true, did: result.did };
   }
-  
+
   // Agent doesn't have public key yet (legacy) - allow but warn
   return { ok: true, did };
 };
@@ -131,9 +132,9 @@ const route = (
 
 // Health
 route('GET', '/health', async () => {
-  return json({ 
-    status: 'ok', 
-    version: '0.3.0', 
+  return json({
+    status: 'ok',
+    version: '0.3.0',
     service: 'openclab-api',
     auth: CONFIG.REQUIRE_SIGNATURES ? 'signatures-required' : 'signatures-optional'
   });
@@ -152,13 +153,13 @@ route('GET', '/api/v1/search', async (req, env) => {
     const query = url.searchParams.get('q');
     const type = url.searchParams.get('type') || 'posts';
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), CONFIG.MAX_PAGE_SIZE);
-    
+
     if (!query) {
       return json({ success: false, error: { message: 'Query parameter "q" is required' } }, 400);
     }
 
     let results: any[] = [];
-    
+
     if (type === 'posts') {
       results = await env.DB.prepare(`
         SELECT p.*, a.display_name as author_name, a.avatar_url as author_avatar
@@ -178,7 +179,7 @@ route('GET', '/api/v1/search', async (req, env) => {
         LIMIT ?
       `).bind(`%${query}%`, `%${query}%`, limit).all().then(r => r.results);
     }
-    
+
     return json({ success: true, data: results, meta: { query, type, limit } });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -188,16 +189,16 @@ route('GET', '/api/v1/search', async (req, env) => {
 // Create agent - requires signed challenge
 route('POST', '/api/v1/agents', async (req, env) => {
   try {
-    const body = await req.json() as { 
-      did: string; 
-      publicKey: string; 
-      displayName: string; 
+    const body = await req.json() as {
+      did: string;
+      publicKey: string;
+      displayName: string;
       bio?: string;
       challenge?: string;
       challengeSignature?: string;
     };
-    const { did, publicKey, displayName, bio = '' } = body;
-    
+    const { did, publicKey, displayName, bio = '', challenge, challengeSignature } = body;
+
     if (!did || !publicKey || !displayName) {
       return json({ success: false, error: { message: 'Missing required fields: did, publicKey, displayName' } }, 400);
     }
@@ -217,6 +218,19 @@ route('POST', '/api/v1/agents', async (req, env) => {
       return json({ success: false, error: { message: 'Invalid public key format' } }, 400);
     }
 
+    if (!challenge || !challengeSignature) {
+      return json({ success: false, error: { message: 'Challenge and signature are required' } }, 401);
+    }
+
+    const existing = await env.DB.prepare('SELECT public_key FROM agents WHERE did = ?')
+      .bind(did).first<{ public_key: string }>();
+
+    const verificationKey = existing?.public_key || publicKey;
+    const challengeValid = await verifyChallenge(verificationKey, challenge, challengeSignature);
+    if (!challengeValid) {
+      return json({ success: false, error: { message: 'Invalid challenge signature' } }, 401);
+    }
+
     await env.DB.prepare(`
       INSERT INTO agents (did, public_key, display_name, bio, created_at, updated_at)
       VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
@@ -226,7 +240,7 @@ route('POST', '/api/v1/agents', async (req, env) => {
         bio = excluded.bio,
         updated_at = datetime('now')
     `).bind(did, publicKey, displayName, bio).run();
-    
+
     return json({ success: true, data: { did, displayName } }, 201);
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -239,7 +253,7 @@ route('GET', '/api/v1/agents', async (req, env) => {
     const url = new URL(req.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), CONFIG.MAX_PAGE_SIZE);
     const offset = parseInt(url.searchParams.get('offset') || '0');
-    
+
     const agents = await env.DB.prepare(`
       SELECT a.did, a.display_name, a.bio, a.avatar_url, a.created_at,
              COUNT(DISTINCT f.follower_did) as follower_count,
@@ -251,7 +265,7 @@ route('GET', '/api/v1/agents', async (req, env) => {
       ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?
     `).bind(limit, offset).all();
-    
+
     return json({ success: true, data: agents.results, meta: { limit, offset } });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -262,7 +276,7 @@ route('GET', '/api/v1/agents', async (req, env) => {
 route('GET', '/agents/:did', async (req, env, params) => {
   try {
     const agent = await env.DB.prepare(`
-      SELECT a.*, 
+      SELECT a.*,
              COUNT(DISTINCT f.follower_did) as follower_count,
              COUNT(DISTINCT f2.following_did) as following_count,
              COUNT(DISTINCT p.id) as post_count
@@ -273,11 +287,11 @@ route('GET', '/agents/:did', async (req, env, params) => {
       WHERE a.did = ?
       GROUP BY a.did
     `).bind(params.did).first();
-    
+
     if (!agent) {
       return json({ success: false, error: { message: 'Agent not found' } }, 404);
     }
-    
+
     return json({ success: true, data: agent });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -288,7 +302,7 @@ route('GET', '/agents/:did', async (req, env, params) => {
 route('GET', '/agents/by-name/:name', async (req, env, params) => {
   try {
     const agent = await env.DB.prepare(`
-      SELECT a.*, 
+      SELECT a.*,
              COUNT(DISTINCT f.follower_did) as follower_count,
              COUNT(DISTINCT f2.following_did) as following_count,
              COUNT(DISTINCT p.id) as post_count
@@ -318,7 +332,7 @@ route('GET', '/feed', async (req, env) => {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), CONFIG.MAX_PAGE_SIZE);
     const offset = parseInt(url.searchParams.get('offset') || '0');
     const submesh = url.searchParams.get('submesh');
-    
+
     let orderBy = 'p.created_at DESC';
     if (sort === 'hot') {
       orderBy = '(p.upvotes - p.downvotes) / ((julianday("now") - julianday(p.created_at)) * 24 + 2) DESC';
@@ -332,17 +346,17 @@ route('GET', '/feed', async (req, env) => {
       JOIN agents a ON p.author_did = a.did
       WHERE p.is_deleted = FALSE AND p.parent_id IS NULL
     `;
-    
+
     if (submesh) {
       query += ` AND p.submesh = ?`;
     }
-    
+
     query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
 
-    const posts = submesh 
+    const posts = submesh
       ? await env.DB.prepare(query).bind(submesh, limit, offset).all()
       : await env.DB.prepare(query).bind(limit, offset).all();
-    
+
     return json({ success: true, data: posts.results, meta: { sort, limit, offset, submesh } });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -358,11 +372,11 @@ route('GET', '/posts/:id', async (req, env, params) => {
       JOIN agents a ON p.author_did = a.did
       WHERE p.id = ? AND p.is_deleted = FALSE
     `).bind(params.id).first();
-    
+
     if (!post) {
       return json({ success: false, error: { message: 'Post not found' } }, 404);
     }
-    
+
     return json({ success: true, data: post });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -374,10 +388,10 @@ route('POST', '/api/v1/posts', async (req, env) => {
   try {
     const body = await req.json() as { content: string; submesh?: string; parentId?: string };
     const { content, submesh = 'general', parentId } = body;
-    
+
     // Authentication already verified by route dispatcher
     const authorDid = req.headers.get('X-Agent-DID')!;
-    
+
     if (!content || content.trim().length === 0) {
       return json({ success: false, error: { message: 'Content is required' } }, 400);
     }
@@ -387,18 +401,18 @@ route('POST', '/api/v1/posts', async (req, env) => {
       INSERT INTO posts (id, author_did, content, submesh, parent_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).bind(id, authorDid, content.trim(), submesh, parentId || null).run();
-    
+
     // Check for mentions and create notifications
     const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
     const mentions = content.match(mentionRegex);
-    
+
     if (mentions) {
       for (const mention of mentions) {
         const username = mention.substring(1);
         const mentionedAgent = await env.DB.prepare(
           'SELECT did FROM agents WHERE display_name = ?'
         ).bind(username).first();
-        
+
         if (mentionedAgent && mentionedAgent.did !== authorDid) {
           await env.DB.prepare(`
             INSERT INTO notifications (agent_did, type, source_did, target_type, target_id, message, created_at)
@@ -407,7 +421,7 @@ route('POST', '/api/v1/posts', async (req, env) => {
         }
       }
     }
-    
+
     return json({ success: true, data: { id } }, 201);
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -419,7 +433,7 @@ route('POST', '/api/v1/posts/:id/comments', async (req, env, params) => {
   try {
     const body = await req.json() as { content: string; parentId?: string };
     const { content, parentId } = body;
-    
+
     // Authentication already verified by route dispatcher
     const authorDid = req.headers.get('X-Agent-DID')!;
 
@@ -455,14 +469,14 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
   try {
     const body = await req.json() as { value: number };
     const { value } = body;
-    
+
     if (value !== 1 && value !== -1) {
       return json({ success: false, error: { message: 'Vote value must be 1 or -1' } }, 400);
     }
-    
+
     // Authentication already verified by route dispatcher
     const voterDid = req.headers.get('X-Agent-DID')!;
-    
+
     await env.DB.prepare(`
       INSERT INTO votes (target_type, target_id, voter_did, value, created_at)
       VALUES ('post', ?, ?, ?, datetime('now'))
@@ -470,7 +484,7 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
     `).bind(params.id, voterDid, value).run();
 
     const voteCounts = await env.DB.prepare(`
-      SELECT 
+      SELECT
         SUM(CASE WHEN value = 1 THEN 1 ELSE 0 END) as upvotes,
         SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END) as downvotes
       FROM votes
@@ -480,7 +494,7 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
     await env.DB.prepare(`
       UPDATE posts SET upvotes = ?, downvotes = ? WHERE id = ?
     `).bind(voteCounts?.upvotes || 0, voteCounts?.downvotes || 0, params.id).run();
-    
+
     return json({ success: true, message: 'Vote recorded', data: voteCounts });
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -490,37 +504,37 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
 // Create task - requires authentication
 route('POST', '/api/v1/tasks', async (req, env) => {
   try {
-    const body = await req.json() as { 
-      title: string; 
-      description?: string; 
-      paymentAmount?: number; 
+    const body = await req.json() as {
+      title: string;
+      description?: string;
+      paymentAmount?: number;
       paymentCurrency?: string;
       deadline?: string;
       tags?: string[];
     };
-    
+
     // Authentication already verified by route dispatcher
     const requesterDid = req.headers.get('X-Agent-DID')!;
-    
+
     if (!body.title) {
       return json({ success: false, error: { message: 'Task title is required' } }, 400);
     }
-    
+
     const id = crypto.randomUUID();
     await env.DB.prepare(`
       INSERT INTO tasks (id, requester_did, title, description, status, payment_amount, payment_currency, deadline, tags, created_at)
       VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, datetime('now'))
     `).bind(
-      id, 
-      requesterDid, 
-      body.title, 
-      body.description || '', 
-      body.paymentAmount || 0, 
+      id,
+      requesterDid,
+      body.title,
+      body.description || '',
+      body.paymentAmount || 0,
       body.paymentCurrency || 'ETH',
       body.deadline || null,
       body.tags ? JSON.stringify(body.tags) : null
     ).run();
-    
+
     return json({ success: true, data: { id } }, 201);
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
@@ -537,8 +551,8 @@ export default {
 
       // Handle CORS preflight
       if (method === 'OPTIONS') {
-        return new Response(null, { 
-          headers: { 
+        return new Response(null, {
+          headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Agent-DID, X-Signature, X-Timestamp, X-Nonce'
@@ -549,9 +563,9 @@ export default {
       // Rate limiting
       const rateLimit = await checkRateLimit(request, env);
       if (!rateLimit.allowed) {
-        return json({ 
-          success: false, 
-          error: { message: 'Rate limit exceeded' } 
+        return json({
+          success: false,
+          error: { message: 'Rate limit exceeded' }
         }, 429, {
           'X-RateLimit-Limit': CONFIG.RATE_LIMIT_MAX.toString(),
           'X-RateLimit-Remaining': '0',
@@ -570,7 +584,7 @@ export default {
       // Find matching route
       for (const route of routes) {
         if (route.method !== method) continue;
-        
+
         const match = path.match(route.pattern);
         if (match) {
           const params: Record<string, string> = {};
@@ -585,20 +599,20 @@ export default {
           }
 
           const response = await route.handler(request, env, params);
-          
+
           // Add rate limit headers
           const headers = new Headers(response.headers);
           headers.set('X-RateLimit-Limit', CONFIG.RATE_LIMIT_MAX.toString());
           headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
           headers.set('X-RateLimit-Reset', rateLimit.reset.toString());
-          
+
           const responseWithHeaders = new Response(response.body, { ...response, headers });
-          
+
           // Cache if cacheable and successful
           if (route.cacheable && response.status === 200 && method === 'GET') {
             await setCached(request, responseWithHeaders);
           }
-          
+
           return responseWithHeaders;
         }
       }

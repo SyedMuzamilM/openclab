@@ -21,46 +21,46 @@ export function base58Encode(buffer: Uint8Array): string {
   const alphabet = BASE58_ALPHABET;
   let result = '';
   let value = BigInt(0);
-  
+
   for (let i = 0; i < buffer.length; i++) {
     value = value * BigInt(256) + BigInt(buffer[i]);
   }
-  
+
   while (value > BigInt(0)) {
     result = alphabet[Number(value % BigInt(58))] + result;
     value = value / BigInt(58);
   }
-  
+
   // Add leading zeros
   for (let i = 0; i < buffer.length && buffer[i] === 0; i++) {
     result = '1' + result;
   }
-  
+
   return result;
 }
 
 export function base58Decode(str: string): Uint8Array {
   const alphabet = BASE58_ALPHABET;
   let value = BigInt(0);
-  
+
   for (let i = 0; i < str.length; i++) {
     const charIndex = alphabet.indexOf(str[i]);
     if (charIndex === -1) throw new Error('Invalid base58 character');
     value = value * BigInt(58) + BigInt(charIndex);
   }
-  
+
   // Convert to bytes
   const bytes: number[] = [];
   while (value > BigInt(0)) {
     bytes.unshift(Number(value % BigInt(256)));
     value = value / BigInt(256);
   }
-  
+
   // Add leading zeros
   for (let i = 0; i < str.length && str[i] === '1'; i++) {
     bytes.unshift(0);
   }
-  
+
   return new Uint8Array(bytes);
 }
 
@@ -80,23 +80,23 @@ export function createSignaturePayload(
     timestamp,
     nonce
   ];
-  
+
   if (body) {
     parts.push(body);
   }
-  
+
   return parts.join('\n');
 }
 
 // Import public key from base58
 export async function importPublicKey(base58PublicKey: string): Promise<CryptoKey> {
   const publicKeyBytes = base58Decode(base58PublicKey);
-  
+
   // Ed25519 public key is 32 bytes
   if (publicKeyBytes.length !== 32) {
     throw new Error('Invalid Ed25519 public key length');
   }
-  
+
   return await crypto.subtle.importKey(
     'raw',
     publicKeyBytes,
@@ -114,7 +114,7 @@ export async function verifySignature(
 ): Promise<boolean> {
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
-  
+
   try {
     return await crypto.subtle.verify(
       'Ed25519',
@@ -138,20 +138,26 @@ export async function verifyRequestAuth(
   const signatureB58 = request.headers.get('X-Signature');
   const timestamp = request.headers.get('X-Timestamp');
   const nonce = request.headers.get('X-Nonce');
-  
+
   if (!did || !signatureB58 || !timestamp || !nonce) {
     return { valid: false, error: 'Missing authentication headers' };
   }
-  
+
   // Check timestamp (prevent replay attacks)
   const now = Math.floor(Date.now() / 1000);
-  const requestTime = parseInt(timestamp);
+  if (!/^\d+$/.test(timestamp)) {
+    return { valid: false, error: 'Invalid timestamp' };
+  }
+  const requestTime = Number(timestamp);
+  if (!Number.isFinite(requestTime)) {
+    return { valid: false, error: 'Invalid timestamp' };
+  }
   const window = 300; // 5 minute window
-  
+
   if (Math.abs(now - requestTime) > window) {
     return { valid: false, error: 'Request timestamp too old' };
   }
-  
+
   // Check nonce uniqueness if KV store is available
   if (env.NONCE_STORE) {
     const nonceKey = `nonce:${did}:${nonce}`;
@@ -162,28 +168,28 @@ export async function verifyRequestAuth(
     // Store nonce with TTL matching the timestamp window
     await env.NONCE_STORE.put(nonceKey, '1', { expirationTtl: 600 });
   }
-  
+
   // Get agent's public key from database
   const agent = await env.DB.prepare(
     'SELECT public_key FROM agents WHERE did = ?'
   ).bind(did).first<{ public_key: string }>();
-  
+
   if (!agent) {
     return { valid: false, error: 'Agent not found' };
   }
-  
+
   try {
     // Import public key
     const publicKey = await importPublicKey(agent.public_key);
-    
+
     // Decode signature
     const signature = base58Decode(signatureB58);
-    
+
     // Create payload
     const url = new URL(request.url);
     const requestBody = body !== undefined ? body : (request.body ? await request.clone().text() : null);
     const contentType = request.headers.get('Content-Type') || '';
-    
+
     const payload = createSignaturePayload(
       request.method,
       url.pathname,
@@ -192,14 +198,14 @@ export async function verifyRequestAuth(
       nonce,
       requestBody
     );
-    
+
     // Verify signature
     const isValid = await verifySignature(publicKey, signature, payload);
-    
+
     if (!isValid) {
       return { valid: false, error: 'Invalid signature' };
     }
-    
+
     return { valid: true, did };
   } catch (error: any) {
     return { valid: false, error: `Verification failed: ${error.message}` };
@@ -222,7 +228,7 @@ export async function verifyChallenge(
   try {
     const publicKey = await importPublicKey(publicKeyB58);
     const signature = base58Decode(signatureB58);
-    
+
     return await verifySignature(publicKey, signature, challenge);
   } catch (error) {
     return false;
