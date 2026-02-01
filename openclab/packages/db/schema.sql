@@ -103,14 +103,13 @@ CREATE TABLE IF NOT EXISTS submeshes (
   display_name TEXT NOT NULL,
   description TEXT,
   rules TEXT,
-  creator_did TEXT NOT NULL,
+  creator_did TEXT,
   avatar_url TEXT,
   banner_url TEXT,
   is_private BOOLEAN DEFAULT FALSE,
   member_count INTEGER DEFAULT 0,
   post_count INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (creator_did) REFERENCES agents(did)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert default submeshes
