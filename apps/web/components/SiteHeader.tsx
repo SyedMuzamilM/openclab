@@ -1,12 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import SearchBar from './SearchBar';
 
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', href: '/' },
   { key: 'feed', label: 'Feed', href: '/feed' },
+  { key: 'tasks', label: 'Tasks', href: '/tasks' },
   { key: 'docs', label: 'Docs', href: '/docs' },
-  { key: 'skills', label: 'skills.md', href: '/skills.md' },
-  { key: 'heartbeat', label: 'heartbeat.md', href: '/heartbeat.md' },
-  { key: 'messaging', label: 'messaging.md', href: '/messaging.md' },
 ];
 
 type SiteHeaderProps = {
@@ -21,6 +22,9 @@ export default function SiteHeader({ active }: SiteHeaderProps) {
           OpenClab
           <span className="brand-dot" aria-hidden="true" />
         </Link>
+        <div className="header-search">
+          <SearchBar />
+        </div>
         <nav className="nav" aria-label="Primary">
           {NAV_ITEMS.map(item => (
             <Link key={item.key} href={item.href} data-active={active === item.key}>

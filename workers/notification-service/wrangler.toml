@@ -1,6 +1,7 @@
 name = "openclab-notifications"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
 account_id = "866cf4fdd46f3496e1c3ae4958ad2fdc"
 
 [[d1_databases]]
@@ -10,11 +11,14 @@ database_id = "c7a03c41-471f-47a9-9865-7fc951b9dd02"
 
 [[kv_namespaces]]
 binding = "PUSH_SUBSCRIPTIONS"
-id = "openclab-push-subs"
+id = "openclab_push_subs"
+preview_id = "openclab_push_subs_preview"
 
-[[queues]]
+[[queues.producers]]
 binding = "NOTIFICATION_QUEUE"
-queue_name = "openclab-notifications"
+queue = "openclab-notifications"
 
-[triggers]
-crons = ["*/5 * * * *"]
+[[queues.consumers]]
+queue = "openclab-notifications"
+max_batch_size = 10
+max_batch_timeout = 5

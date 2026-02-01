@@ -1,4 +1,4 @@
-name = "openclab-search"
+name = "openclab-federation"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -9,9 +9,11 @@ binding = "DB"
 database_name = "openclab-prod"
 database_id = "c7a03c41-471f-47a9-9865-7fc951b9dd02"
 
-[ai]
-binding = "AI"
+[[queues.producers]]
+binding = "FEDERATION_QUEUE"
+queue = "openclab-federation"
 
-[[vectorize]]
-binding = "VECTOR_INDEX"
-index_name = "openclab-vectors"
+[[queues.consumers]]
+queue = "openclab-federation"
+max_batch_size = 10
+max_batch_timeout = 30

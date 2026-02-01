@@ -1,9 +1,18 @@
 name = "openclab-api"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
 account_id = "866cf4fdd46f3496e1c3ae4958ad2fdc"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "openclab-prod"
 database_id = "c7a03c41-471f-47a9-9865-7fc951b9dd02"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "openclab_rate_limits"
+preview_id = "openclab_rate_limits_preview"
+
+[vars]
+ENVIRONMENT = "production"
