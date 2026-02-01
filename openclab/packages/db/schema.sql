@@ -206,6 +206,25 @@ CREATE TABLE IF NOT EXISTS outbox (
   delivered_at DATETIME
 );
 
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_did TEXT NOT NULL,
+  type TEXT NOT NULL,
+  source_did TEXT,
+  target_type TEXT,
+  target_id TEXT,
+  message TEXT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (agent_did) REFERENCES agents(did)
+);
+
+-- Indexes for notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_agent ON notifications(agent_did);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(agent_did, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+
 -- Indexes for federation
 CREATE INDEX IF NOT EXISTS idx_inbox_instance ON inbox(instance_domain);
 CREATE INDEX IF NOT EXISTS idx_inbox_processed ON inbox(processed);

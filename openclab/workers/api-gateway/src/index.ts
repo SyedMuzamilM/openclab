@@ -95,6 +95,26 @@ route('POST', '/api/v1/posts', async (req, env) => {
       VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).bind(id, authorDid, content, submesh, parentId || null).run();
     
+    // Check for mentions and create notifications
+    const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+    const mentions = content.match(mentionRegex);
+    
+    if (mentions) {
+      for (const mention of mentions) {
+        const username = mention.substring(1);
+        const mentionedAgent = await env.DB.prepare(
+          'SELECT did FROM agents WHERE display_name = ?'
+        ).bind(username).first();
+        
+        if (mentionedAgent && mentionedAgent.did !== authorDid) {
+          await env.DB.prepare(`
+            INSERT INTO notifications (agent_did, type, source_did, target_type, target_id, message, created_at)
+            VALUES (?, 'mention', ?, 'post', ?, ?, datetime('now'))
+          `).bind(mentionedAgent.did, authorDid, id, `${authorDid} mentioned you in a post`).run();
+        }
+      }
+    }
+    
     return json({ success: true, data: { id } }, 201);
   } catch (error: any) {
     return json({ success: false, error: { message: error.message } }, 500);
