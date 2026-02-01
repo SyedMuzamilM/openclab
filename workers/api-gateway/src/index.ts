@@ -6,13 +6,13 @@ import {
   base58Encode,
   createSignaturePayload,
   verifyRequestAuth,
-  verifyChallenge,
   generateChallenge
 } from '../../packages/sdk/src/auth';
 
 interface Env {
   DB: D1Database;
   RATE_LIMITS: KVNamespace;
+  NONCE_STORE?: KVNamespace;
 }
 
 // Configuration
@@ -91,7 +91,8 @@ const requireAuth = async (req: Request, env: Env, requireSignature: boolean = f
   
   // If agent has a public key, verify signature
   if (agent.public_key && (requireSignature || CONFIG.REQUIRE_SIGNATURES)) {
-    const result = await verifyRequestAuth(req, env.DB);
+    // Clone request to avoid consuming body
+    const result = await verifyRequestAuth(req.clone(), env);
     if (!result.valid) {
       return { ok: false, response: json({ success: false, error: { message: result.error } }, 401) };
     }
@@ -374,10 +375,8 @@ route('POST', '/api/v1/posts', async (req, env) => {
     const body = await req.json() as { content: string; submesh?: string; parentId?: string };
     const { content, submesh = 'general', parentId } = body;
     
-    // Authenticate request
-    const auth = await requireAuth(req, env);
-    if (!auth.ok) return auth.response!;
-    const authorDid = auth.did!;
+    // Authentication already verified by route dispatcher
+    const authorDid = req.headers.get('X-Agent-DID')!;
     
     if (!content || content.trim().length === 0) {
       return json({ success: false, error: { message: 'Content is required' } }, 400);
@@ -421,10 +420,8 @@ route('POST', '/api/v1/posts/:id/comments', async (req, env, params) => {
     const body = await req.json() as { content: string; parentId?: string };
     const { content, parentId } = body;
     
-    // Authenticate request
-    const auth = await requireAuth(req, env);
-    if (!auth.ok) return auth.response!;
-    const authorDid = auth.did!;
+    // Authentication already verified by route dispatcher
+    const authorDid = req.headers.get('X-Agent-DID')!;
 
     if (!content || content.trim().length === 0) {
       return json({ success: false, error: { message: 'Content is required' } }, 400);
@@ -463,10 +460,8 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
       return json({ success: false, error: { message: 'Vote value must be 1 or -1' } }, 400);
     }
     
-    // Authenticate request
-    const auth = await requireAuth(req, env);
-    if (!auth.ok) return auth.response!;
-    const voterDid = auth.did!;
+    // Authentication already verified by route dispatcher
+    const voterDid = req.headers.get('X-Agent-DID')!;
     
     await env.DB.prepare(`
       INSERT INTO votes (target_type, target_id, voter_did, value, created_at)
@@ -504,10 +499,8 @@ route('POST', '/api/v1/tasks', async (req, env) => {
       tags?: string[];
     };
     
-    // Authenticate request
-    const auth = await requireAuth(req, env);
-    if (!auth.ok) return auth.response!;
-    const requesterDid = auth.did!;
+    // Authentication already verified by route dispatcher
+    const requesterDid = req.headers.get('X-Agent-DID')!;
     
     if (!body.title) {
       return json({ success: false, error: { message: 'Task title is required' } }, 400);

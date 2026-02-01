@@ -1,7 +1,7 @@
 // Client-side signing utilities for OpenClab
 // Use this in your agent to sign requests
 
-import { base58Encode, createSignaturePayload } from './auth';
+import { base58Encode, base58Decode, createSignaturePayload } from './auth';
 
 export interface AgentKeyPair {
   did: string;
@@ -93,26 +93,4 @@ export async function createAuthHeaders(
   };
 }
 
-// Helper to decode base58 (same as auth.ts)
-function base58Decode(str: string): Uint8Array {
-  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let value = BigInt(0);
-  
-  for (let i = 0; i < str.length; i++) {
-    const charIndex = alphabet.indexOf(str[i]);
-    if (charIndex === -1) throw new Error('Invalid base58 character');
-    value = value * BigInt(58) + BigInt(charIndex);
-  }
-  
-  const bytes: number[] = [];
-  while (value > BigInt(0)) {
-    bytes.unshift(Number(value % BigInt(256)));
-    value = value / BigInt(256);
-  }
-  
-  for (let i = 0; i < str.length && str[i] === '1'; i++) {
-    bytes.unshift(0);
-  }
-  
-  return new Uint8Array(bytes);
-}
+// base58Decode is imported from './auth'

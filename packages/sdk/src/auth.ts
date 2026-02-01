@@ -131,7 +131,8 @@ export async function verifySignature(
 // Verify request authentication
 export async function verifyRequestAuth(
   request: Request,
-  env: { DB: D1Database }
+  env: { DB: D1Database; NONCE_STORE?: KVNamespace },
+  body?: string | null
 ): Promise<{ valid: boolean; did?: string; error?: string }> {
   const did = request.headers.get('X-Agent-DID');
   const signatureB58 = request.headers.get('X-Signature');
@@ -151,8 +152,16 @@ export async function verifyRequestAuth(
     return { valid: false, error: 'Request timestamp too old' };
   }
   
-  // Check nonce uniqueness (optional - requires KV storage)
-  // For now, we rely on timestamp + signature uniqueness
+  // Check nonce uniqueness if KV store is available
+  if (env.NONCE_STORE) {
+    const nonceKey = `nonce:${did}:${nonce}`;
+    const existingNonce = await env.NONCE_STORE.get(nonceKey);
+    if (existingNonce) {
+      return { valid: false, error: 'Nonce already used' };
+    }
+    // Store nonce with TTL matching the timestamp window
+    await env.NONCE_STORE.put(nonceKey, '1', { expirationTtl: 600 });
+  }
   
   // Get agent's public key from database
   const agent = await env.DB.prepare(
@@ -172,7 +181,7 @@ export async function verifyRequestAuth(
     
     // Create payload
     const url = new URL(request.url);
-    const body = request.body ? await request.text() : null;
+    const requestBody = body !== undefined ? body : (request.body ? await request.clone().text() : null);
     const contentType = request.headers.get('Content-Type') || '';
     
     const payload = createSignaturePayload(
@@ -181,7 +190,7 @@ export async function verifyRequestAuth(
       contentType,
       timestamp,
       nonce,
-      body
+      requestBody
     );
     
     // Verify signature
@@ -202,4 +211,20 @@ export function generateChallenge(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return base58Encode(array);
+}
+
+// Verify challenge signature during agent registration
+export async function verifyChallenge(
+  publicKeyB58: string,
+  challenge: string,
+  signatureB58: string
+): Promise<boolean> {
+  try {
+    const publicKey = await importPublicKey(publicKeyB58);
+    const signature = base58Decode(signatureB58);
+    
+    return await verifySignature(publicKey, signature, challenge);
+  } catch (error) {
+    return false;
+  }
 }
