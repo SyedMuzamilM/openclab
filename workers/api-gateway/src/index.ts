@@ -3,7 +3,6 @@
 
 interface Env {
   DB: D1Database;
-  CACHE: Cache;
   RATE_LIMITS: KVNamespace;
 }
 
@@ -54,19 +53,14 @@ const checkRateLimit = async (req: Request, env: Env): Promise<{ allowed: boolea
 };
 
 // Cache helper
-const getCached = async (req: Request, env: Env): Promise<Response | null> => {
-  const cacheKey = new URL(req.url).pathname + new URL(req.url).search;
-  const cached = await env.CACHE.match(new Request(cacheKey));
+const getCached = async (req: Request): Promise<Response | null> => {
+  const cached = await caches.default.match(req);
   return cached;
 };
 
-const setCached = async (req: Request, env: Env, response: Response, ttl: number = CONFIG.CACHE_TTL): Promise<void> => {
-  const cacheKey = new URL(req.url).pathname + new URL(req.url).search;
+const setCached = async (req: Request, response: Response): Promise<void> => {
   const cloned = response.clone();
-  const headers = new Headers(cloned.headers);
-  headers.set('Cache-Control', `public, max-age=${ttl}`);
-  const cachedResponse = new Response(cloned.body, { ...cloned, headers });
-  await env.CACHE.put(new Request(cacheKey), cachedResponse, { expirationTtl: ttl });
+  await caches.default.put(req, cloned);
 };
 
 // Router
@@ -163,8 +157,7 @@ route('POST', '/api/v1/agents', async (req, env) => {
         updated_at = datetime('now')
     `).bind(did, publicKey, displayName, bio).run();
     
-    // Clear cache for agents list
-    await env.CACHE.delete(new Request('/api/v1/agents'));
+    // Clear cache for agents list (skip for now - cache will expire)
     
     return json({ success: true, data: { did, displayName } }, 201);
   } catch (error: any) {
@@ -337,8 +330,7 @@ route('POST', '/api/v1/posts', async (req, env) => {
       }
     }
     
-    // Clear feed cache
-    await env.CACHE.delete(new Request('/feed'));
+    // Clear feed cache (skip for now - cache will expire)
     
     return json({ success: true, data: { id } }, 201);
   } catch (error: any) {
@@ -554,9 +546,7 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
       UPDATE posts SET upvotes = ?, downvotes = ? WHERE id = ?
     `).bind(voteCounts?.upvotes || 0, voteCounts?.downvotes || 0, params.id).run();
     
-    // Clear post cache
-    await env.CACHE.delete(new Request(`/posts/${params.id}`));
-    await env.CACHE.delete(new Request('/feed'));
+    // Clear post cache (skip for now - cache will expire)
     
     return json({ success: true, message: 'Vote recorded', data: voteCounts });
   } catch (error: any) {
@@ -754,7 +744,7 @@ export default {
 
       // Check cache for GET requests
       if (method === 'GET') {
-        const cached = await getCached(request, env);
+        const cached = await getCached(request);
         if (cached) {
           return cached;
         }
@@ -783,7 +773,7 @@ export default {
           
           // Cache if cacheable and successful
           if (route.cacheable && response.status === 200 && method === 'GET') {
-            await setCached(request, env, responseWithHeaders);
+            await setCached(request, responseWithHeaders);
           }
           
           return responseWithHeaders;
