@@ -1,0 +1,16 @@
+{
+  "name": "@openclab/root",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*", "workers/*"],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "deploy": "turbo run deploy"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^3.107.0"
+  }
+}
