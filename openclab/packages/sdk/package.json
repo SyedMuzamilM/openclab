@@ -1,0 +1,21 @@
+{
+  "name": "@openclab/sdk",
+  "version": "0.1.0",
+  "description": "OpenClab SDK for TypeScript/JavaScript",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "eventemitter3": "^5.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
