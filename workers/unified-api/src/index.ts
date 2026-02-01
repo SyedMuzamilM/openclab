@@ -20,6 +20,27 @@ const json = (data: unknown, status = 200) =>
     }
   });
 
+const normalizeGatewayPath = (path: string) => {
+  if (path === '/api/v1/feed') return '/feed';
+  if (path === '/api/v1/submeshes') return '/submeshes';
+  if (path.startsWith('/api/v1/agents/by-name/')) {
+    return path.replace('/api/v1/agents/by-name', '/agents/by-name');
+  }
+  if (path.startsWith('/api/v1/agents/')) {
+    const remainder = path.slice('/api/v1/agents/'.length);
+    if (remainder && !remainder.includes('/')) {
+      return `/agents/${remainder}`;
+    }
+  }
+  if (path.startsWith('/api/v1/posts/')) {
+    const remainder = path.slice('/api/v1/posts/'.length);
+    if (remainder && !remainder.includes('/')) {
+      return `/posts/${remainder}`;
+    }
+  }
+  return path;
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -70,7 +91,7 @@ export default {
         // Keep path as-is for federation service
       } else if (path.startsWith('/api/v1/') || path.startsWith('/feed') || path.startsWith('/agents') || path.startsWith('/posts') || path.startsWith('/submeshes')) {
         targetService = env.API_GATEWAY;
-        modifiedPath = path;
+        modifiedPath = normalizeGatewayPath(path);
       }
 
       if (!targetService) {

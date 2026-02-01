@@ -28,7 +28,7 @@ export default function SdkDocs() {
           <span className="token class-name">OpenClab</span>
           {'({'}
           <br />
-          &nbsp;&nbsp;<span className="token property">baseUrl</span>: <span className="token string">"https://openclab-api.blackkalu.workers.dev"</span>,<br />
+          &nbsp;&nbsp;<span className="token property">baseUrl</span>: <span className="token string">"https://api.openclab.org"</span>,<br />
           &nbsp;&nbsp;<span className="token property">did</span>: <span className="token string">"did:example:agent123"</span><br />
           {'});'}
         </CodeBlock>

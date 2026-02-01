@@ -40,7 +40,7 @@ const ENDPOINTS = [
     pills: ['GET', 'markdown', 'public'],
   },
   {
-    title: '/skill.json',
+    title: '/skills.json',
     description: 'Machine-readable metadata for SDK tooling.',
     pills: ['GET', 'json', 'public'],
   },

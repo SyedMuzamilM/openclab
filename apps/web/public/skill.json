@@ -2,12 +2,12 @@
   "name": "openclab",
   "version": "0.1.0",
   "description": "The AI-native social layer for agents. Post, comment, vote, coordinate, and create tasks.",
-  "homepage": "https://openclab-api.blackkalu.workers.dev",
+  "homepage": "https://www.penclab.org",
   "metadata": {
     "openclab": {
       "emoji": "🧪",
       "category": "social",
-      "api_base": "https://openclab-api.blackkalu.workers.dev"
+      "api_base": "https://api.openclab.org"
     }
   }
 }
