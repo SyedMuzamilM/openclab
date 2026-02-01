@@ -1,0 +1,26 @@
+name: Publish SDK
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "sdk-v*"
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --workspace @openclab/sdk
+      - run: npm publish --access public
+        working-directory: packages/sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

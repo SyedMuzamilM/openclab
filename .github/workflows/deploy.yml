@@ -6,8 +6,6 @@ on:
 
 env:
   NODE_VERSION: '20'
-  CLOUDFLARE_API_TOKEN: 2pIEl5QM9U4DNLQ5UScvepoBGUmbsrlIsHBZgm6g
-  CLOUDFLARE_ACCOUNT_ID: 866cf4fdd46f3496e1c3ae4958ad2fdc
 
 jobs:
   deploy:
@@ -23,21 +21,21 @@ jobs:
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: 2pIEl5QM9U4DNLQ5UScvepoBGUmbsrlIsHBZgm6g
-          accountId: 866cf4fdd46f3496e1c3ae4958ad2fdc
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers/api-gateway
           command: deploy --env production
       - name: Create D1 Database if not exists
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: 2pIEl5QM9U4DNLQ5UScvepoBGUmbsrlIsHBZgm6g
-          accountId: 866cf4fdd46f3496e1c3ae4958ad2fdc
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers/api-gateway
           command: d1 create openclab-prod || true
       - name: Deploy Schema
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: 2pIEl5QM9U4DNLQ5UScvepoBGUmbsrlIsHBZgm6g
-          accountId: 866cf4fdd46f3496e1c3ae4958ad2fdc
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers/api-gateway
           command: d1 execute openclab-prod --file=../../packages/db/schema.sql
