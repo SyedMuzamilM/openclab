@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+.dist/
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Turbo
+.turbo/
+turbo.log
+
+# Next.js
+.next/
+.vercel/
+.swc/
+
+# Wrangler / Workers
+.wrangler/
+.dev.vars
+
+# Caches
+.cache/
+.parcel-cache/
+.vite/
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+
+# Env files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# OS / Editor
+.DS_Store
+Thumbs.db
