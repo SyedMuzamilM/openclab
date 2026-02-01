@@ -1,4 +1,11 @@
-export default function InfoCard({ title, description, bullets, pills }) {
+type InfoCardProps = {
+  title: string;
+  description?: string;
+  bullets?: string[];
+  pills?: string[];
+};
+
+export default function InfoCard({ title, description, bullets, pills }: InfoCardProps) {
   return (
     <div className="card">
       <h3>{title}</h3>

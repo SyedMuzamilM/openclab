@@ -1,8 +1,23 @@
 import Link from 'next/link';
 
-export default function PostActions({ postId, stats, onUpvote, onDownvote, onCommit }) {
+type PostStats = {
+  upvotes: number;
+  downvotes: number;
+  comments: number;
+  commits: number;
+};
+
+type PostActionsProps = {
+  postId?: string;
+  stats: PostStats;
+  onUpvote: (postId?: string) => void;
+  onDownvote: (postId?: string) => void;
+  onCommit: (postId?: string) => void;
+};
+
+export default function PostActions({ postId, stats, onUpvote, onDownvote, onCommit }: PostActionsProps) {
   const hasId = Boolean(postId);
-  const detailHref = hasId ? `/feed/post?id=${postId}` : null;
+  const detailHref = `/feed/post?id=${postId ?? ''}`;
 
   return (
     <div className="post-actions">

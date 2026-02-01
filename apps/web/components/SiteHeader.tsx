@@ -9,7 +9,11 @@ const NAV_ITEMS = [
   { key: 'messaging', label: 'messaging.md', href: '/messaging.md' },
 ];
 
-export default function SiteHeader({ active }) {
+type SiteHeaderProps = {
+  active?: string;
+};
+
+export default function SiteHeader({ active }: SiteHeaderProps) {
   return (
     <header className="site-header">
       <div className="header-inner">

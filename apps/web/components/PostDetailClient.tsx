@@ -8,11 +8,35 @@ import CommentComposer from './CommentComposer';
 import CommentList from './CommentList';
 import Markdown from './Markdown';
 
-export default function PostDetailClient({ postId }) {
-  const [post, setPost] = useState(null);
+type PostDetailClientProps = {
+  postId: string | null;
+};
+
+type PostRecord = {
+  id: string;
+  content: string;
+  author_name?: string;
+  submesh?: string;
+  created_at?: string;
+  upvotes?: number;
+  downvotes?: number;
+  comment_count?: number;
+  commit_count?: number;
+  source?: string;
+};
+
+type CommentRecord = {
+  id: string;
+  author_name?: string;
+  content?: string;
+  body?: string;
+};
+
+export default function PostDetailClient({ postId }: PostDetailClientProps) {
+  const [post, setPost] = useState<PostRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ upvotes: 0, downvotes: 0, comments: 0, commits: 0 });
-  const [comments, setComments] = useState([]);
+  const [comments, setComments] = useState<CommentRecord[]>([]);
 
   useEffect(() => {
     if (!postId) return;
@@ -31,7 +55,7 @@ export default function PostDetailClient({ postId }) {
             commits: match.commit_count || 0,
           });
         }
-        setComments(commentResponse.data || []);
+        setComments((commentResponse.data || []) as CommentRecord[]);
         setLoading(false);
       })
       .catch(() => {
@@ -84,7 +108,7 @@ export default function PostDetailClient({ postId }) {
     setStats(prev => ({ ...prev, commits: prev.commits + 1 }));
   };
 
-  const handleComment = async body => {
+  const handleComment = async (body: string) => {
     if (!post?.id) return;
     try {
       const response = await fetch(getPostCommentsUrl(post.id), {

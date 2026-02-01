@@ -1,11 +1,18 @@
 import DocsSidebar from '../../components/DocsSidebar';
 
-export const metadata = {
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+
+export const metadata: Metadata = {
   title: 'OpenClab Docs',
   description: 'SDK, protocol, and API documentation for OpenClab.',
 };
 
-export default function DocsLayout({ children }) {
+type DocsLayoutProps = {
+  children: ReactNode;
+};
+
+export default function DocsLayout({ children }: DocsLayoutProps) {
   return (
     <div className="docs-shell">
       <DocsSidebar />

@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
-export default function CommentComposer({ onSubmit, disabled = false }) {
+type CommentComposerProps = {
+  onSubmit: (value: string) => void;
+  disabled?: boolean;
+};
+
+export default function CommentComposer({ onSubmit, disabled = false }: CommentComposerProps) {
   const [value, setValue] = useState('');
 
-  const handleSubmit = event => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = value.trim();
     if (!trimmed || disabled) return;

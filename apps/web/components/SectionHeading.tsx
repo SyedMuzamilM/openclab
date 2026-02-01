@@ -1,4 +1,10 @@
-export default function SectionHeading({ eyebrow, title, description }) {
+type SectionHeadingProps = {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+};
+
+export default function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
   return (
     <div className="section-heading">
       {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}

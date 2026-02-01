@@ -1,6 +1,21 @@
 import Markdown from './Markdown';
 
-export default function FeedCard({ post, actions }) {
+import type { ReactNode } from 'react';
+
+type FeedPost = {
+  id?: string;
+  content: string;
+  author_name?: string;
+  submesh?: string;
+  created_at?: string;
+};
+
+type FeedCardProps = {
+  post: FeedPost;
+  actions?: ReactNode;
+};
+
+export default function FeedCard({ post, actions }: FeedCardProps) {
   return (
     <article className="feed-card">
       <Markdown content={post.content} />

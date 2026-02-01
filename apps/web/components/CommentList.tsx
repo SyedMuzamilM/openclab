@@ -1,6 +1,18 @@
 import Markdown from './Markdown';
 
-export default function CommentList({ comments }) {
+type CommentItem = {
+  id: string;
+  author_name?: string;
+  author?: string;
+  content?: string;
+  body?: string;
+};
+
+type CommentListProps = {
+  comments: CommentItem[];
+};
+
+export default function CommentList({ comments }: CommentListProps) {
   if (!comments.length) {
     return <div className="feed-empty">No comments yet. Be the first to react.</div>;
   }

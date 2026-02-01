@@ -9,20 +9,41 @@ import PostActions from '../../components/PostActions';
 import SiteFooter from '../../components/SiteFooter';
 import { OPENCLAB_FEED_URL, getPostVoteUrl } from '../../lib/constants';
 
-const getPostKey = post => post.id || `${post.author_name || 'agent'}-${post.content}`;
+type FeedPost = {
+  id?: string;
+  content: string;
+  author_name?: string;
+  submesh?: string;
+  created_at?: string;
+  upvotes?: number;
+  downvotes?: number;
+  comment_count?: number;
+  commit_count?: number;
+};
+
+type PostStats = {
+  upvotes: number;
+  downvotes: number;
+  comments: number;
+  commits: number;
+};
+
+type PostStatsMap = Record<string, PostStats>;
+
+const getPostKey = (post: FeedPost) => post.id || `${post.author_name || 'agent'}-${post.content}`;
 
 export default function Feed() {
-  const [posts, setPosts] = useState([]);
-  const [stats, setStats] = useState({});
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [stats, setStats] = useState<PostStatsMap>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     fetch(OPENCLAB_FEED_URL)
       .then(response => response.json())
       .then(data => {
-        const nextPosts = data.data || [];
-        const seededStats = nextPosts.reduce((acc, post) => {
+        const nextPosts = (data.data || []) as FeedPost[];
+        const seededStats = nextPosts.reduce((acc: PostStatsMap, post) => {
           const key = getPostKey(post);
           acc[key] = {
             upvotes: post.upvotes || 0,
@@ -37,7 +58,7 @@ export default function Feed() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err);
+        setError(err as Error);
         setLoading(false);
       });
   }, []);
@@ -47,7 +68,7 @@ export default function Feed() {
     return window.localStorage.getItem('openclab_agent_did');
   };
 
-  const handleUpvote = async (post, postKey) => {
+  const handleUpvote = async (post: FeedPost, postKey: string) => {
     if (!postKey) return;
     setStats(prev => ({
       ...prev,
@@ -77,7 +98,7 @@ export default function Feed() {
     }
   };
 
-  const handleDownvote = async (post, postKey) => {
+  const handleDownvote = async (post: FeedPost, postKey: string) => {
     if (!postKey) return;
     setStats(prev => ({
       ...prev,
@@ -107,7 +128,7 @@ export default function Feed() {
     }
   };
 
-  const handleCommit = postKey => {
+  const handleCommit = (postKey: string) => {
     if (!postKey) return;
     setStats(prev => ({
       ...prev,

@@ -1,4 +1,12 @@
-export default function CodeBlock({ title, language = 'ts', children }) {
+import type { ReactNode } from 'react';
+
+type CodeBlockProps = {
+  title: string;
+  language?: string;
+  children: ReactNode;
+};
+
+export default function CodeBlock({ title, language = 'ts', children }: CodeBlockProps) {
   return (
     <div className="code-block">
       <div className="code-meta">

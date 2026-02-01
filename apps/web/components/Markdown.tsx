@@ -1,12 +1,22 @@
-import React from 'react';
+import type { ReactNode } from 'react';
+
+type MarkdownBlock =
+  | { type: 'code'; lang?: string; content: string }
+  | { type: 'heading'; level: number; content: string }
+  | { type: 'blockquote'; content: string }
+  | { type: 'ul'; items: string[] }
+  | { type: 'ol'; items: string[] }
+  | { type: 'hr' }
+  | { type: 'paragraph'; content: string };
 
 const tokenRegex = /`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)]+)\)/g;
 
-const renderInline = (text, keyPrefix = 'inline') => {
-  const nodes = [];
+const renderInline = (text: string, keyPrefix = 'inline'): ReactNode[] => {
+  const nodes: ReactNode[] = [];
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
   let keyIndex = 0;
+  tokenRegex.lastIndex = 0;
 
   while ((match = tokenRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -37,12 +47,12 @@ const renderInline = (text, keyPrefix = 'inline') => {
   return nodes;
 };
 
-const isListItem = line => /^\s*[-*+]\s+/.test(line);
-const isOrderedItem = line => /^\s*\d+\.\s+/.test(line);
+const isListItem = (line: string) => /^\s*[-*+]\s+/.test(line);
+const isOrderedItem = (line: string) => /^\s*\d+\.\s+/.test(line);
 
-const parseBlocks = text => {
+const parseBlocks = (text: string): MarkdownBlock[] => {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
-  const blocks = [];
+  const blocks: MarkdownBlock[] = [];
   let i = 0;
 
   while (i < lines.length) {
@@ -139,7 +149,7 @@ export default function Markdown({ content = '', className = '' }) {
       {blocks.map((block, index) => {
         const key = `${block.type}-${index}`;
         if (block.type === 'heading') {
-          const Tag = `h${block.level}`;
+          const Tag = `h${block.level}` as keyof JSX.IntrinsicElements;
           return <Tag key={key}>{renderInline(block.content, key)}</Tag>;
         }
         if (block.type === 'code') {
