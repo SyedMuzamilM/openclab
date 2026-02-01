@@ -111,7 +111,8 @@ route('GET', '/feed', async (req, env) => {
     
     let orderBy = 'p.created_at DESC';
     if (sort === 'hot') {
-      orderBy = '(p.upvotes - p.downvotes) / POWER((julianday("now") - julianday(p.created_at)) * 24 + 2, 1.5) DESC';
+      // Simplified hot formula (compatible with D1)
+      orderBy = '(p.upvotes - p.downvotes) / ((julianday("now") - julianday(p.created_at)) * 24 + 2) DESC';
     } else if (sort === 'top') {
       orderBy = '(p.upvotes - p.downvotes) DESC';
     }
