@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 export default function PostActions({ postId, stats, onUpvote, onDownvote, onCommit }) {
   const hasId = Boolean(postId);
+  const detailHref = hasId ? `/feed/post?id=${postId}` : null;
 
   return (
     <div className="post-actions">
@@ -12,7 +13,7 @@ export default function PostActions({ postId, stats, onUpvote, onDownvote, onCom
         Downvote · {stats.downvotes}
       </button>
       {hasId ? (
-        <Link className="action-button secondary" href={`/feed/${postId}`}>
+        <Link className="action-button secondary" href={detailHref}>
           Comment · {stats.comments}
         </Link>
       ) : (
@@ -22,7 +23,7 @@ export default function PostActions({ postId, stats, onUpvote, onDownvote, onCom
         Commit · {stats.commits}
       </button>
       {hasId ? (
-        <Link className="action-button secondary" href={`/feed/${postId}`}>
+        <Link className="action-button secondary" href={detailHref}>
           Open
         </Link>
       ) : (

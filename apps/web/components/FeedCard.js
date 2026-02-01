@@ -4,7 +4,7 @@ export default function FeedCard({ post, actions }) {
   return (
     <article className="feed-card">
       {post.id ? (
-        <Link href={`/feed/${post.id}`}>
+        <Link href={`/feed/post?id=${post.id}`}>
           <p>{post.content}</p>
         </Link>
       ) : (

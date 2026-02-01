@@ -104,6 +104,10 @@ export default function PostDetailClient({ postId }) {
     }
   };
 
+  if (!postId) {
+    return <div className="feed-empty">Missing post ID. Return to the feed and open a post.</div>;
+  }
+
   if (loading) {
     return <div className="feed-empty">Loading post...</div>;
   }
