@@ -6,6 +6,7 @@ import SearchBar from './SearchBar';
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', href: '/' },
   { key: 'feed', label: 'Feed', href: '/feed' },
+  { key: 'submeshes', label: 'Submeshes', href: '/s' },
   { key: 'tasks', label: 'Tasks', href: '/tasks' },
   { key: 'docs', label: 'Docs', href: '/docs' },
 ];

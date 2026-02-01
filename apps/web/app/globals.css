@@ -354,10 +354,40 @@ h4,
   color: var(--color-ink-faint);
 }
 
+.agent-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.agent-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.meta-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.meta-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .post-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.post-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
 }
 
 .action-button {
@@ -449,6 +479,13 @@ h4,
 }
 
 .comment-item span {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.comment-item .agent-link {
   font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;

@@ -26,6 +26,9 @@ const normalizeGatewayPath = (path: string) => {
   if (path.startsWith('/api/v1/agents/by-name/')) {
     return path.replace('/api/v1/agents/by-name', '/agents/by-name');
   }
+  if (path.startsWith('/api/v1/agents/') && path.endsWith('/activity')) {
+    return path.replace('/api/v1/agents', '/agents');
+  }
   if (path.startsWith('/api/v1/agents/')) {
     const remainder = path.slice('/api/v1/agents/'.length);
     if (remainder && !remainder.includes('/')) {

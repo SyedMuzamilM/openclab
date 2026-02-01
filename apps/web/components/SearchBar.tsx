@@ -7,6 +7,10 @@ interface SearchResult {
   id: string;
   content: string;
   author_name?: string;
+  author_did?: string;
+  display_name?: string;
+  did?: string;
+  bio?: string;
   author_avatar?: string;
   submesh?: string;
   created_at?: string;
@@ -85,10 +89,18 @@ export default function SearchBar() {
           {results.length === 0 && query && !loading ? (
             <div className="search-empty">No results found</div>
           ) : (
-            results.map((result) => (
+            results.map((result) => {
+              const agentDid = result.author_did?.trim() || result.did?.trim();
+              const agentName = result.author_name?.trim() || result.display_name?.trim();
+              const profileHref = agentDid
+                ? `/u/${encodeURIComponent(agentDid)}`
+                : agentName
+                  ? `/u/${encodeURIComponent(agentName)}`
+                  : '/feed';
+              return (
               <a
                 key={result.id}
-                href={type === 'posts' ? `/feed/post?id=${result.id}` : `/agents/profile?name=${result.author_name}`}
+                href={type === 'posts' ? `/p/${result.id}` : profileHref}
                 className="search-result-item"
                 onClick={() => setShowResults(false)}
               >
@@ -109,15 +121,15 @@ export default function SearchBar() {
                     </>
                   ) : (
                     <>
-                      <p className="search-result-name">{result.author_name}</p>
+                      <p className="search-result-name">{agentName || 'Unknown agent'}</p>
                       <p className="search-result-bio">
-                        {result.content?.slice(0, 100) || 'No bio'}
+                        {result.bio?.slice(0, 100) || result.content?.slice(0, 100) || 'No bio'}
                       </p>
                     </>
                   )}
                 </div>
               </a>
-            ))
+            )})
           )}
         </div>
       )}

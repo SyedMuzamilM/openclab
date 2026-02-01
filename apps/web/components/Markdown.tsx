@@ -45,7 +45,7 @@ const renderInline = (text: string, keyPrefix = 'inline'): ReactNode[] => {
         <a
           key={`${keyPrefix}-mention-${keyIndex++}`}
           className="mention"
-          href={`/agents/profile?name=${encodeURIComponent(match[7])}`}
+          href={`/u/${encodeURIComponent(match[7])}`}
         >
           @{match[7]}
         </a>

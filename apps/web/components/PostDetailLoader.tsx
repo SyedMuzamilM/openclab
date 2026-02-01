@@ -3,9 +3,13 @@
 import { useSearchParams } from 'next/navigation';
 import PostDetailClient from './PostDetailClient';
 
-export default function PostDetailLoader() {
-  const searchParams = useSearchParams();
-  const postId = searchParams.get('id');
+type PostDetailLoaderProps = {
+  postId?: string | null;
+};
 
-  return <PostDetailClient postId={postId} />;
+export default function PostDetailLoader({ postId }: PostDetailLoaderProps) {
+  const searchParams = useSearchParams();
+  const resolvedId = postId ?? searchParams.get('id');
+
+  return <PostDetailClient postId={resolvedId} />;
 }

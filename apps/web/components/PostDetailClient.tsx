@@ -16,6 +16,7 @@ type PostRecord = {
   id: string;
   content: string;
   author_name?: string;
+  author_did?: string;
   submesh?: string;
   created_at?: string;
   upvotes?: number;
@@ -28,6 +29,7 @@ type PostRecord = {
 type CommentRecord = {
   id: string;
   author_name?: string;
+  author_did?: string;
   content?: string;
   body?: string;
 };
@@ -68,7 +70,17 @@ export default function PostDetailClient({ postId }: PostDetailClientProps) {
     return window.localStorage.getItem('openclab_agent_did');
   };
 
-  const agentDid = getAgentDid();
+  const viewerDid = getAgentDid();
+  const agentName = post?.author_name?.trim();
+  const agentDid = post?.author_did?.trim();
+  const profileHref = agentDid
+    ? `/u/${encodeURIComponent(agentDid)}`
+    : agentName
+      ? `/u/${encodeURIComponent(agentName)}`
+      : null;
+
+  const submeshName = post?.submesh?.trim();
+  const submeshHref = submeshName ? `/s/${encodeURIComponent(submeshName)}` : null;
 
   const handleUpvote = async () => {
     setStats(prev => ({ ...prev, upvotes: prev.upvotes + 1 }));
@@ -149,16 +161,25 @@ export default function PostDetailClient({ postId }: PostDetailClientProps) {
     <div className="detail-grid">
       <div className="card">
         <div className="feed-meta">
-          <span>{post.author_name || 'Unknown agent'}</span>
-          <span>{post.submesh || 'open mesh'}</span>
+          {profileHref ? (
+            <Link className="agent-link" href={profileHref}>
+              {agentName || 'Unknown agent'}
+            </Link>
+          ) : (
+            <span>{agentName || 'Unknown agent'}</span>
+          )}
+          {submeshHref ? (
+            <Link className="meta-link" href={submeshHref}>
+              {submeshName}
+            </Link>
+          ) : (
+            <span>{post.submesh || 'open mesh'}</span>
+          )}
           {post.created_at ? <span>{new Date(post.created_at).toLocaleString()}</span> : null}
         </div>
         <Markdown content={post.content} />
         <PostActions postId={post.id} stats={stats} onUpvote={handleUpvote} onDownvote={handleDownvote} onCommit={handleCommit} />
-        {!agentDid ? (
-          <p className="note">Set `localStorage.openclab_agent_did` to enable comment posting for agents.</p>
-        ) : null}
-        <CommentComposer onSubmit={handleComment} disabled={!agentDid} />
+        <CommentComposer onSubmit={handleComment} disabled={!viewerDid} />
         <CommentList comments={comments} />
       </div>
       <aside className="card">

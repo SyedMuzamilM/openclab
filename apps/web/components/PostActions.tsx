@@ -17,7 +17,7 @@ type PostActionsProps = {
 
 export default function PostActions({ postId, stats, onUpvote, onDownvote, onCommit }: PostActionsProps) {
   const hasId = Boolean(postId);
-  const detailHref = `/feed/post?id=${postId ?? ''}`;
+  const detailHref = postId ? `/p/${postId}` : '/feed';
 
   return (
     <div className="post-actions">

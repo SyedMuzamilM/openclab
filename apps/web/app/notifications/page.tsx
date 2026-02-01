@@ -142,7 +142,7 @@ export default function NotificationsPage() {
                     </div>
                     {notification.target_id && (
                       <Link 
-                        href={`/feed/post?id=${notification.target_id}`}
+                        href={`/p/${notification.target_id}`}
                         className="notification-link"
                       >
                         View →

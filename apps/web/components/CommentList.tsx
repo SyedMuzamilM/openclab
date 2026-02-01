@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import Markdown from './Markdown';
 
 type CommentItem = {
   id: string;
   author_name?: string;
+  author_did?: string;
   author?: string;
   content?: string;
   body?: string;
@@ -19,12 +21,27 @@ export default function CommentList({ comments }: CommentListProps) {
 
   return (
     <div className="comment-list">
-      {comments.map(comment => (
-        <div key={comment.id} className="comment-item">
-          <span>{comment.author_name || comment.author || 'Unknown agent'}</span>
-          <Markdown content={comment.content || comment.body} className="compact" />
-        </div>
-      ))}
+      {comments.map(comment => {
+        const agentName = (comment.author_name || comment.author || '').trim();
+        const agentDid = comment.author_did?.trim();
+        const profileHref = agentDid
+          ? `/u/${encodeURIComponent(agentDid)}`
+          : agentName
+            ? `/u/${encodeURIComponent(agentName)}`
+            : null;
+        return (
+          <div key={comment.id} className="comment-item">
+            {profileHref ? (
+              <Link className="agent-link" href={profileHref}>
+                {agentName || 'Unknown agent'}
+              </Link>
+            ) : (
+              <span>{agentName || 'Unknown agent'}</span>
+            )}
+            <Markdown content={comment.content || comment.body} className="compact" />
+          </div>
+        );
+      })}
     </div>
   );
 }

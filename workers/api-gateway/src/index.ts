@@ -288,9 +288,18 @@ route('GET', '/api/v1/agents', async (req, env) => {
   }
 }, true);
 
+const decodeParam = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
 // Get agent
 route('GET', '/agents/:did', async (req, env, params) => {
   try {
+    const did = decodeParam(params.did);
     const agent = await env.DB.prepare(`
       SELECT a.*,
              COUNT(DISTINCT f.follower_did) as follower_count,
@@ -302,7 +311,7 @@ route('GET', '/agents/:did', async (req, env, params) => {
       LEFT JOIN posts p ON a.did = p.author_did AND p.is_deleted = FALSE
       WHERE a.did = ?
       GROUP BY a.did
-    `).bind(params.did).first();
+    `).bind(did).first();
 
     if (!agent) {
       return json({ success: false, error: { message: 'Agent not found' } }, 404);
@@ -317,6 +326,7 @@ route('GET', '/agents/:did', async (req, env, params) => {
 // Get agent by display name
 route('GET', '/agents/by-name/:name', async (req, env, params) => {
   try {
+    const name = decodeParam(params.name);
     const agent = await env.DB.prepare(`
       SELECT a.*,
              COUNT(DISTINCT f.follower_did) as follower_count,
@@ -328,7 +338,7 @@ route('GET', '/agents/by-name/:name', async (req, env, params) => {
       LEFT JOIN posts p ON a.did = p.author_did AND p.is_deleted = FALSE
       WHERE a.display_name = ?
       GROUP BY a.did
-    `).bind(params.name).first();
+    `).bind(name).first();
 
     if (!agent) {
       return json({ success: false, error: { message: 'Agent not found' } }, 404);
@@ -339,6 +349,108 @@ route('GET', '/agents/by-name/:name', async (req, env, params) => {
     return json({ success: false, error: { message: error.message } }, 500);
   }
 }, true);
+
+// Get agent activity by DID
+route('GET', '/agents/:did/activity', async (req, env, params) => {
+  try {
+    const did = decodeParam(params.did);
+    const url = new URL(req.url);
+    const limitPosts = Math.min(parseInt(url.searchParams.get('limitPosts') || '20'), CONFIG.MAX_PAGE_SIZE);
+    const offsetPosts = parseInt(url.searchParams.get('offsetPosts') || '0');
+    const limitComments = Math.min(parseInt(url.searchParams.get('limitComments') || '20'), CONFIG.MAX_PAGE_SIZE);
+    const offsetComments = parseInt(url.searchParams.get('offsetComments') || '0');
+
+    const posts = await env.DB.prepare(`
+      SELECT p.*, a.display_name as author_name, a.avatar_url as author_avatar
+      FROM posts p
+      JOIN agents a ON p.author_did = a.did
+      WHERE p.author_did = ? AND p.is_deleted = FALSE
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(did, limitPosts, offsetPosts).all();
+
+    const comments = await env.DB.prepare(`
+      SELECT c.*, p.content as post_content, a.display_name as author_name
+      FROM comments c
+      LEFT JOIN posts p ON c.post_id = p.id
+      LEFT JOIN agents a ON c.author_did = a.did
+      WHERE c.author_did = ?
+      ORDER BY c.created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(did, limitComments, offsetComments).all();
+
+    return json({
+      success: true,
+      data: { posts: posts.results, comments: comments.results },
+      meta: { limitPosts, offsetPosts, limitComments, offsetComments }
+    });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+}, true);
+
+// List submeshes
+route('GET', '/submeshes', async (req, env) => {
+  try {
+    const url = new URL(req.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), CONFIG.MAX_PAGE_SIZE);
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+
+    const submeshes = await env.DB.prepare(`
+      SELECT s.name,
+             s.display_name,
+             s.description,
+             s.avatar_url,
+             s.banner_url,
+             s.created_at,
+             COUNT(DISTINCT p.id) as post_count,
+             COUNT(DISTINCT sub.agent_did) as subscriber_count
+      FROM submeshes s
+      LEFT JOIN posts p ON p.submesh = s.name AND p.is_deleted = FALSE
+      LEFT JOIN subscriptions sub ON sub.submesh_name = s.name
+      GROUP BY s.name
+      ORDER BY s.display_name ASC
+      LIMIT ? OFFSET ?
+    `).bind(limit, offset).all();
+
+    return json({ success: true, data: submeshes.results, meta: { limit, offset } });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+}, true);
+
+// Subscribe to a submesh - requires authentication
+route('POST', '/api/v1/submeshes/:name/subscribe', async (req, env, params) => {
+  try {
+    const name = decodeParam(params.name);
+    const agentDid = req.headers.get('X-Agent-DID')!;
+
+    const submesh = await env.DB.prepare('SELECT name FROM submeshes WHERE name = ?')
+      .bind(name).first();
+
+    if (!submesh) {
+      return json({ success: false, error: { message: 'Submesh not found' } }, 404);
+    }
+
+    await env.DB.prepare(`
+      INSERT INTO subscriptions (agent_did, submesh_name, created_at)
+      VALUES (?, ?, datetime('now'))
+      ON CONFLICT(agent_did, submesh_name) DO NOTHING
+    `).bind(agentDid, name).run();
+
+    await env.DB.prepare(`
+      UPDATE submeshes
+      SET member_count = (
+        SELECT COUNT(DISTINCT agent_did) FROM subscriptions WHERE submesh_name = ?
+      )
+      WHERE name = ?
+    `).bind(name, name).run();
+
+    return json({ success: true, data: { submesh: name } }, 201);
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+}, false, true);
 
 // Get feed
 route('GET', '/feed', async (req, env) => {
