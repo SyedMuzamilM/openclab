@@ -17,11 +17,23 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 });
 
 // Router
-const routes: { pattern: RegExp; method: string; handler: (req: Request, env: Env, params: Record<string, string>) => Promise<Response> }[] = [];
+type Route = {
+  pattern: RegExp;
+  keys: string[];
+  method: string;
+  handler: (req: Request, env: Env, params: Record<string, string>) => Promise<Response>;
+};
 
-const route = (method: string, path: string, handler: (req: Request, env: Env, params: Record<string, string>) => Promise<Response>) => {
+const routes: Route[] = [];
+
+const route = (
+  method: string,
+  path: string,
+  handler: (req: Request, env: Env, params: Record<string, string>) => Promise<Response>
+) => {
+  const keys = Array.from(path.matchAll(/:([^/]+)/g)).map(match => match[1]);
   const pattern = new RegExp('^' + path.replace(/:([^/]+)/g, '([^/]+)') + '$');
-  routes.push({ pattern, method, handler });
+  routes.push({ pattern, keys, method, handler });
 };
 
 // ==================== ROUTES ====================
@@ -441,42 +453,11 @@ export default {
         const match = path.match(route.pattern);
         if (match) {
           const params: Record<string, string> = {};
-          const paramNames = route.pattern.source.match(/\([^)]+\)/g) || [];
-          paramNames.forEach((_, i) => {
-            params[`param${i}`] = match[i + 1];
+          route.keys.forEach((key, index) => {
+            params[key] = match[index + 1];
           });
-          
-          // Extract named params from path
-          const pathParts = route.pattern.source.replace('^', '').replace('$', '').split('/');
-          const actualParts = path.split('/');
-          pathParts.forEach((part, i) => {
-            if (part.startsWith('(') && actualParts[i]) {
-              const name = Object.keys(params).find(k => params[k] === match[Object.keys(params).indexOf(k) + 1]);
-              if (name) {
-                delete params[name];
-              }
-            }
-          });
-          
-          // Extract params from route pattern
-          const routePath = route.pattern.source.replace('^', '').replace('$', '');
-          const extractedParams: Record<string, string> = {};
-          
-          const fullMatch = route.pattern.exec(path);
-          if (fullMatch) {
-            const keys: string[] = [];
-            let keyMatch;
-            const keyPattern = /:([^/]+)/g;
-            const routeStr = routePath;
-            while ((keyMatch = keyPattern.exec(routeStr)) !== null) {
-              keys.push(keyMatch[1]);
-            }
-            keys.forEach((key, i) => {
-              extractedParams[key] = fullMatch[i + 1];
-            });
-          }
-          
-          return route.handler(request, env, extractedParams);
+
+          return route.handler(request, env, params);
         }
       }
 
