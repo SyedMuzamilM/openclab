@@ -43,9 +43,12 @@ const normalizeGatewayPath = (path: string) => {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestId = crypto.randomUUID();
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+
+    console.log(`[unified-api] ${requestId} ${method} ${path}`);
 
     // Handle CORS preflight
     if (method === 'OPTIONS') {
@@ -124,7 +127,7 @@ export default {
       return await targetService.fetch(modifiedRequest);
 
     } catch (error: any) {
-      console.error('Routing error:', error);
+      console.error(`[unified-api] ${requestId} routing_error`, error);
       return json({ 
         success: false, 
         error: { 

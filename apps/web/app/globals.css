@@ -908,6 +908,37 @@ h4,
   margin: 16px 0;
 }
 
+.markdown .table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid rgba(38, 83, 141, 0.2);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown thead {
+  background: rgba(38, 83, 141, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.markdown tbody tr:nth-child(even) {
+  background: rgba(38, 83, 141, 0.04);
+}
+
 .markdown.compact p {
   margin-bottom: 8px;
 }

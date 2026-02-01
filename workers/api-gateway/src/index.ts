@@ -75,11 +75,19 @@ const setCached = async (req: Request, response: Response): Promise<void> => {
 };
 
 // Authentication middleware - verifies DID signatures
-const requireAuth = async (req: Request, env: Env, requireSignature: boolean = false): Promise<{ ok: boolean; response?: Response; did?: string }> => {
+const requireAuth = async (
+  req: Request,
+  env: Env,
+  requireSignature: boolean = false
+): Promise<{ ok: boolean; response?: Response; did?: string; error?: string }> => {
   const did = req.headers.get('X-Agent-DID');
-
+  
   if (!did) {
-    return { ok: false, response: json({ success: false, error: { message: 'X-Agent-DID header required' } }, 401) };
+    return {
+      ok: false,
+      error: 'X-Agent-DID header required',
+      response: json({ success: false, error: { message: 'X-Agent-DID header required' } }, 401)
+    };
   }
 
   // Check if agent exists and has a public key
@@ -87,7 +95,11 @@ const requireAuth = async (req: Request, env: Env, requireSignature: boolean = f
     .bind(did).first<{ public_key: string }>();
 
   if (!agent) {
-    return { ok: false, response: json({ success: false, error: { message: 'Agent not found' } }, 404) };
+    return {
+      ok: false,
+      error: 'Agent not found',
+      response: json({ success: false, error: { message: 'Agent not found' } }, 404)
+    };
   }
 
   // If agent has a public key, verify signature
@@ -95,7 +107,11 @@ const requireAuth = async (req: Request, env: Env, requireSignature: boolean = f
     // Clone request to avoid consuming body
     const result = await verifyRequestAuth(req.clone(), env);
     if (!result.valid) {
-      return { ok: false, response: json({ success: false, error: { message: result.error } }, 401) };
+      return {
+        ok: false,
+        error: result.error,
+        response: json({ success: false, error: { message: result.error } }, 401)
+      };
     }
     return { ok: true, did: result.did };
   }
@@ -544,10 +560,13 @@ route('POST', '/api/v1/tasks', async (req, env) => {
 // Main handler
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestId = crypto.randomUUID();
     try {
       const url = new URL(request.url);
       const path = url.pathname;
       const method = request.method;
+
+      console.log(`[api-gateway] ${requestId} ${method} ${path}`);
 
       // Handle CORS preflight
       if (method === 'OPTIONS') {
@@ -595,7 +614,14 @@ export default {
           // Check authentication if required
           if (route.requireSignature) {
             const auth = await requireAuth(request, env, true);
-            if (!auth.ok) return auth.response!;
+            if (!auth.ok) {
+              console.warn(`[api-gateway] ${requestId} auth_failed`, {
+                path,
+                did: request.headers.get('X-Agent-DID') || 'unknown',
+                error: auth.error || 'unknown'
+              });
+              return auth.response!;
+            }
           }
 
           const response = await route.handler(request, env, params);
@@ -623,6 +649,7 @@ export default {
         'X-RateLimit-Reset': rateLimit.reset.toString()
       });
     } catch (error: any) {
+      console.error(`[api-gateway] ${requestId} error`, error);
       return json({ success: false, error: { message: 'Internal Server Error', details: error.message } }, 500);
     }
   }

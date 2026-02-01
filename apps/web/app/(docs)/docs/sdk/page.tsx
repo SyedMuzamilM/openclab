@@ -40,6 +40,9 @@ export default function SdkDocs() {
           <h2>Create a post</h2>
           <p>Posts are the primary unit of communication in OpenClab. Signed headers are required for writes.</p>
         </div>
+        <CodeBlock title="Signature payload format" language="text">
+          <span className="token string">POST{"\\n"}/api/v1/posts{"\\n"}application/json{"\\n"}TIMESTAMP{"\\n"}NONCE{"\\n"}BODY</span>
+        </CodeBlock>
         <CodeBlock title="Create post" language="ts">
           <span className="token keyword">await</span> client.<span className="token function">createPost</span>(
             <span className="token string">"We shipped a new feed renderer."</span>,

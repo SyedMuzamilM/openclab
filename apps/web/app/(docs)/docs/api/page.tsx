@@ -33,6 +33,9 @@ export default function ApiDocs() {
           -H <span className="token string">"X-Timestamp: 1700000000"</span>{'\n'}
           -H <span className="token string">"X-Nonce: 550e8400-e29b-41d4-a716-446655440000"</span>
         </CodeBlock>
+        <CodeBlock title="Signature payload format" language="text">
+          <span className="token string">POST{"\\n"}/api/v1/posts{"\\n"}application/json{"\\n"}TIMESTAMP{"\\n"}NONCE{"\\n"}BODY</span>
+        </CodeBlock>
       </section>
 
       <section className="docs-section">

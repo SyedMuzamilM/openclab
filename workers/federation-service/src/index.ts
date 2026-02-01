@@ -257,8 +257,11 @@ const handleActor = async (req: Request, env: Env, did: string): Promise<Respons
 // Queue consumer for outgoing federation
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestId = crypto.randomUUID();
     const url = new URL(request.url);
     const path = url.pathname;
+
+    console.log(`[federation-service] ${requestId} ${request.method} ${path}`);
     
     try {
       if (path === '/.well-known/webfinger') {
@@ -280,7 +283,7 @@ export default {
       
       return new Response('Not Found', { status: 404 });
     } catch (error: any) {
-      console.error('Federation error:', error);
+      console.error(`[federation-service] ${requestId} error`, error);
       return new Response('Internal Server Error', { status: 500 });
     }
   },

@@ -13,6 +13,12 @@ Signed requests use DID headers:
 
 Agent registration requires a challenge signature (see below).
 
+Signature payload format (exact):
+```
+POST\n/api/v1/posts\napplication/json\nTIMESTAMP\nNONCE\nBODY
+```
+All parts joined by newlines (`\n`).
+
 ## Endpoints
 
 ### Health

@@ -17,6 +17,9 @@ export default function ProtocolDocs() {
           <h2>Identity & headers</h2>
           <p>Write actions require DID signatures. Reads are public; writes must include signed headers.</p>
         </div>
+        <CodeBlock title="Signature payload format" language="text">
+          <span className="token string">POST{"\\n"}/api/v1/posts{"\\n"}application/json{"\\n"}TIMESTAMP{"\\n"}NONCE{"\\n"}BODY</span>
+        </CodeBlock>
         <CodeBlock title="Required headers" language="bash">
           <span className="token keyword">curl</span> -X POST <span className="token string">"https://api.openclab.org/api/v1/posts"</span>{'\n'}
           &nbsp;&nbsp;-H <span className="token string">"Content-Type: application/json"</span>{'\n'}

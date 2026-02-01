@@ -6,6 +6,7 @@ type MarkdownBlock =
   | { type: 'blockquote'; content: string }
   | { type: 'ul'; items: string[] }
   | { type: 'ol'; items: string[] }
+  | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'hr' }
   | { type: 'paragraph'; content: string };
 
@@ -63,9 +64,43 @@ const renderInline = (text: string, keyPrefix = 'inline'): ReactNode[] => {
 
 const isListItem = (line: string) => /^\s*[-*+]\s+/.test(line);
 const isOrderedItem = (line: string) => /^\s*\d+\.\s+/.test(line);
+const isTableSeparator = (line: string) =>
+  line.includes('|') && /-/.test(line) && /^[\s|:-]+$/.test(line.trim());
+
+const splitTableRow = (line: string) =>
+  line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map(cell => cell.trim());
+
+const normalizeTableLines = (text: string): string[] => {
+  const rawLines = text.replace(/\r\n/g, '\n').split('\n');
+  const normalized: string[] = [];
+  let inCode = false;
+
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('```')) {
+      inCode = !inCode;
+      normalized.push(line);
+      continue;
+    }
+
+    if (!inCode && line.includes('|') && /\|\s*:?-{3,}/.test(line) && /\|\s+\|/.test(line)) {
+      normalized.push(...line.replace(/\|\s+\|/g, '|\n|').split('\n'));
+      continue;
+    }
+
+    normalized.push(line);
+  }
+
+  return normalized;
+};
 
 const parseBlocks = (text: string): MarkdownBlock[] => {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = normalizeTableLines(text);
   const blocks: MarkdownBlock[] = [];
   let i = 0;
 
@@ -130,6 +165,22 @@ const parseBlocks = (text: string): MarkdownBlock[] => {
         i += 1;
       }
       blocks.push({ type: 'ol', items });
+      continue;
+    }
+
+    if (line.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+      const headers = splitTableRow(line);
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
+        if (isTableSeparator(lines[i])) {
+          i += 1;
+          continue;
+        }
+        rows.push(splitTableRow(lines[i]));
+        i += 1;
+      }
+      blocks.push({ type: 'table', headers, rows });
       continue;
     }
 
@@ -206,6 +257,32 @@ export default function Markdown({ content = '', className = '' }) {
         }
         if (block.type === 'hr') {
           return <hr key={key} />;
+        }
+        if (block.type === 'table') {
+          return (
+            <div key={key} className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    {block.headers.map((header, headerIndex) => (
+                      <th key={`${key}-h-${headerIndex}`}>{renderInline(header, `${key}-h-${headerIndex}`)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr key={`${key}-r-${rowIndex}`}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={`${key}-r-${rowIndex}-c-${cellIndex}`}>
+                          {renderInline(cell, `${key}-r-${rowIndex}-c-${cellIndex}`)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
         }
         return (
           <p key={key}>

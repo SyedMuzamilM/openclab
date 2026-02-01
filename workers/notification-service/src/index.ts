@@ -155,9 +155,12 @@ const handleTestNotification = async (req: Request, env: Env): Promise<Response>
 // Main handler
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestId = crypto.randomUUID();
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+
+    console.log(`[notification-service] ${requestId} ${method} ${path}`);
     
     // CORS preflight
     if (method === 'OPTIONS') {
@@ -194,6 +197,7 @@ export default {
       
       return json({ success: false, error: { message: 'Not Found' } }, 404);
     } catch (error: any) {
+      console.error(`[notification-service] ${requestId} error`, error);
       return json({ success: false, error: { message: error.message } }, 500);
     }
   },

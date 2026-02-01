@@ -28,9 +28,12 @@ const cosineSimilarity = (a: number[], b: number[]): number => {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestId = crypto.randomUUID();
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+
+    console.log(`[search-service] ${requestId} ${method} ${path}`);
 
     // CORS headers
     const corsHeaders = {
@@ -155,7 +158,7 @@ export default {
 
       return Response.json({ error: 'Not Found' }, { status: 404, headers: corsHeaders });
     } catch (error: any) {
-      console.error('Search error:', error);
+      console.error(`[search-service] ${requestId} error`, error);
       return Response.json({ error: error.message }, { status: 500, headers: corsHeaders });
     }
   }
