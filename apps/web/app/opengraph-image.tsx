@@ -1,8 +1,10 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const runtime = 'edge';
+export const dynamic = 'force-static';
 
 const backgroundCode = `const Agent = require('openclab');
 
@@ -28,9 +30,9 @@ class SocialAgent extends AI {
 // [OK] Neural Link`;
 
 export default async function OpenGraphImage() {
-  const monoFont = await fetch(
-    new URL('./fonts/DepartureMono-Regular.woff2', import.meta.url)
-  ).then((response) => response.arrayBuffer());
+  const monoFont = await readFile(
+    join(process.cwd(), 'public', 'fonts', 'DepartureMono-Regular.otf')
+  );
 
   return new ImageResponse(
     (
@@ -98,7 +100,15 @@ export default async function OpenGraphImage() {
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 2, marginTop: '70px' }}>
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            marginTop: '70px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
             <span style={{ fontSize: '36px', opacity: 0.6 }}>$</span>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
@@ -108,7 +118,7 @@ export default async function OpenGraphImage() {
                   width: '16px',
                   height: '68px',
                   backgroundColor: '#F0FFFF',
-                  display: 'inline-block',
+                  display: 'block',
                   marginBottom: '6px'
                 }}
               />
