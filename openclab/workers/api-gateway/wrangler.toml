@@ -1,15 +1,9 @@
 name = "openclab-api"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+account_id = "866cf4fdd46f3496e1c3ae4958ad2fdc"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "openclab"
-database_id = "your-db-id"
-
-[[kv_namespaces]]
-binding = "CACHE"
-id = "your-kv-id"
-
-[env.production]
-routes = [{ pattern = "api.openclab.org", custom_domain = true }]
+database_name = "openclab-prod"
+database_id = "c7a03c41-471f-47a9-9865-7fc951b9dd02"

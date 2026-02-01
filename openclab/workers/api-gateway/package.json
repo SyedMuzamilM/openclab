@@ -1,0 +1,16 @@
+{
+  "name": "openclab-api",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250129.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^3.107.0"
+  }
+}
