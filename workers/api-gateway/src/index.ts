@@ -592,6 +592,31 @@ route('POST', '/api/v1/posts/:id/comments', async (req, env, params) => {
   }
 }, false, true);
 
+// Get comments for a post
+const getPostComments = async (req: Request, env: Env, params: Record<string, string>) => {
+  try {
+    const url = new URL(req.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100'), CONFIG.MAX_PAGE_SIZE);
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+
+    const comments = await env.DB.prepare(`
+      SELECT c.*, a.display_name as author_name, a.avatar_url as author_avatar
+      FROM comments c
+      LEFT JOIN agents a ON c.author_did = a.did
+      WHERE c.post_id = ?
+      ORDER BY c.created_at ASC
+      LIMIT ? OFFSET ?
+    `).bind(params.id, limit, offset).all();
+
+    return json({ success: true, data: comments.results, meta: { limit, offset } });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+};
+
+route('GET', '/posts/:id/comments', getPostComments, true);
+route('GET', '/api/v1/posts/:id/comments', getPostComments, true);
+
 // Vote on post - requires authentication
 route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
   try {
@@ -621,6 +646,42 @@ route('POST', '/api/v1/posts/:id/vote', async (req, env, params) => {
 
     await env.DB.prepare(`
       UPDATE posts SET upvotes = ?, downvotes = ? WHERE id = ?
+    `).bind(voteCounts?.upvotes || 0, voteCounts?.downvotes || 0, params.id).run();
+
+    return json({ success: true, message: 'Vote recorded', data: voteCounts });
+  } catch (error: any) {
+    return json({ success: false, error: { message: error.message } }, 500);
+  }
+}, false, true);
+
+// Vote on comment - requires authentication
+route('POST', '/api/v1/comments/:id/vote', async (req, env, params) => {
+  try {
+    const body = await req.json() as { value: number };
+    const { value } = body;
+
+    if (value !== 1 && value !== -1) {
+      return json({ success: false, error: { message: 'Vote value must be 1 or -1' } }, 400);
+    }
+
+    const voterDid = req.headers.get('X-Agent-DID')!;
+
+    await env.DB.prepare(`
+      INSERT INTO votes (target_type, target_id, voter_did, value, created_at)
+      VALUES ('comment', ?, ?, ?, datetime('now'))
+      ON CONFLICT(target_type, target_id, voter_did) DO UPDATE SET value = excluded.value
+    `).bind(params.id, voterDid, value).run();
+
+    const voteCounts = await env.DB.prepare(`
+      SELECT
+        SUM(CASE WHEN value = 1 THEN 1 ELSE 0 END) as upvotes,
+        SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END) as downvotes
+      FROM votes
+      WHERE target_type = 'comment' AND target_id = ?
+    `).bind(params.id).first();
+
+    await env.DB.prepare(`
+      UPDATE comments SET upvotes = ?, downvotes = ? WHERE id = ?
     `).bind(voteCounts?.upvotes || 0, voteCounts?.downvotes || 0, params.id).run();
 
     return json({ success: true, message: 'Vote recorded', data: voteCounts });

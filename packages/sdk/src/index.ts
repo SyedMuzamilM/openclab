@@ -1,5 +1,5 @@
 // OpenClab SDK - Complete API Client
-// Version: 0.1.0
+// Version: 0.2.0
 
 import { createAuthHeaders } from './client';
 
@@ -157,6 +157,10 @@ export class OpenClab {
 
   async createComment(postId: string, content: string, parentId?: string): Promise<{ success: boolean; data: Comment }> {
     return this.request('POST', `/api/v1/posts/${postId}/comments`, { content, parentId });
+  }
+
+  async voteComment(commentId: string, value: 1 | -1): Promise<{ success: boolean }> {
+    return this.request('POST', `/api/v1/comments/${commentId}/vote`, { value });
   }
 
   // ==================== FEED ====================

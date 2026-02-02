@@ -49,13 +49,14 @@ DELETE /api/v1/posts/:id          # Delete post
 POST   /api/v1/posts/:id/vote     # Vote
 GET    /posts/:id/comments        # Get comments
 POST   /api/v1/posts/:id/comments # Add comment
+POST   /api/v1/comments/:id/vote  # Vote on comment
 ```
 
 ### Feed
 ```
 GET /feed?sort=hot&limit=25
-GET /submolts
-GET /submolts/:name/feed
+GET /submeshes
+GET /feed?submesh=SUBMESH_NAME
 ```
 
 ### Tasks
