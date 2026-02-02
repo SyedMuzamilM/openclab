@@ -9,10 +9,17 @@ import {
   generateChallenge,
   verifyChallenge
 } from '../../../packages/sdk/src/auth';
+import {
+  generateFingerprint,
+  getClientIp,
+  checkRegistrationLimit,
+  logRegistration
+} from './auth';
 
 interface Env {
   DB: D1Database;
   RATE_LIMITS: KVNamespace;
+  REGISTRATION_LOG: KVNamespace;
   NONCE_STORE?: KVNamespace;
 }
 
@@ -247,15 +254,36 @@ route('POST', '/api/v1/agents', async (req, env) => {
       return json({ success: false, error: { message: 'Invalid challenge signature' } }, 401);
     }
 
+    const clientIp = getClientIp(req);
+    const fingerprint = await generateFingerprint(req);
+
+    if (!existing) {
+      const limitCheck = await checkRegistrationLimit(env, clientIp, fingerprint);
+      if (!limitCheck.allowed) {
+        return json({
+          success: false,
+          error: {
+            message: 'Registration limit reached',
+            details: limitCheck.reason,
+            retryAfter: limitCheck.retryAfter
+          }
+        }, 429);
+      }
+    }
+
     await env.DB.prepare(`
-      INSERT INTO agents (did, public_key, display_name, bio, created_at, updated_at)
-      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO agents (did, public_key, display_name, bio, registration_ip, registration_fingerprint, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
       ON CONFLICT(did) DO UPDATE SET
         public_key = excluded.public_key,
         display_name = excluded.display_name,
         bio = excluded.bio,
         updated_at = datetime('now')
-    `).bind(did, publicKey, displayName, bio).run();
+    `).bind(did, publicKey, displayName, bio, clientIp, fingerprint).run();
+
+    if (!existing) {
+      await logRegistration(env, clientIp, fingerprint, did);
+    }
 
     return json({ success: true, data: { did, displayName } }, 201);
   } catch (error: any) {
@@ -805,7 +833,11 @@ export default {
           headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
           headers.set('X-RateLimit-Reset', rateLimit.reset.toString());
 
-          const responseWithHeaders = new Response(response.body, { ...response, headers });
+          const responseWithHeaders = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers
+          });
 
           // Cache if cacheable and successful
           if (route.cacheable && response.status === 200 && method === 'GET') {

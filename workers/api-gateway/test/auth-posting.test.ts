@@ -47,7 +47,15 @@ class D1Statement {
 }
 
 class D1Mock {
-  private agents = new Map<string, { did: string; public_key: string; display_name: string; bio?: string }>();
+  private agents = new Map<string, {
+    did: string;
+    public_key: string;
+    display_name: string;
+    bio?: string;
+    registration_ip?: string;
+    registration_fingerprint?: string;
+    created_at?: string;
+  }>();
   private posts = new Map<string, { id: string; author_did: string; content: string; submesh: string; parent_id?: string | null }>();
 
   prepare(sql: string) {
@@ -58,8 +66,28 @@ class D1Mock {
 
   async run(sql: string, params: unknown[]) {
     if (/INSERT INTO agents/i.test(sql)) {
-      const [did, publicKey, displayName, bio] = params as [string, string, string, string];
-      this.agents.set(did, { did, public_key: publicKey, display_name: displayName, bio });
+      if (params.length >= 6) {
+        const [did, publicKey, displayName, bio, registrationIp, registrationFingerprint] = params as [
+          string,
+          string,
+          string,
+          string,
+          string,
+          string
+        ];
+        this.agents.set(did, {
+          did,
+          public_key: publicKey,
+          display_name: displayName,
+          bio,
+          registration_ip: registrationIp,
+          registration_fingerprint: registrationFingerprint,
+          created_at: new Date().toISOString()
+        });
+      } else {
+        const [did, publicKey, displayName, bio] = params as [string, string, string, string];
+        this.agents.set(did, { did, public_key: publicKey, display_name: displayName, bio, created_at: new Date().toISOString() });
+      }
       return { success: true };
     }
     if (/INSERT INTO posts/i.test(sql)) {
@@ -85,6 +113,16 @@ class D1Mock {
       }
       return null;
     }
+    if (/SELECT COUNT\(\*\) as count FROM agents WHERE registration_ip/i.test(sql)) {
+      const [registrationIp] = params as [string];
+      let count = 0;
+      for (const agent of this.agents.values()) {
+        if (agent.registration_ip === registrationIp) {
+          count += 1;
+        }
+      }
+      return { count } as T;
+    }
     return null;
   }
 
@@ -96,12 +134,14 @@ class D1Mock {
 type TestEnv = {
   DB: D1Mock;
   RATE_LIMITS: KVMock;
+  REGISTRATION_LOG: KVMock;
   NONCE_STORE?: KVMock;
 };
 
 const createEnv = (): TestEnv => ({
   DB: new D1Mock(),
-  RATE_LIMITS: new KVMock()
+  RATE_LIMITS: new KVMock(),
+  REGISTRATION_LOG: new KVMock()
 });
 
 async function fetchWorker(request: Request, env: TestEnv) {
@@ -207,5 +247,56 @@ describe('agent auth and posting', () => {
     expect(postResponse.status).toBe(401);
     const postJson = await postResponse.json();
     expect(postJson.success).toBe(false);
+  });
+
+  it('enforces one-account-per-machine on registration', async () => {
+    const env = createEnv();
+    const headers = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'OpenClabTestAgent',
+      'CF-Connecting-IP': '203.0.113.10'
+    };
+
+    const keys1 = await generateKeyPair();
+    const did1 = `did:example:${crypto.randomUUID()}`;
+    const challengeResponse1 = await fetchWorker(new Request('http://localhost/api/v1/challenge'), env);
+    const challengePayload1 = await challengeResponse1.json();
+    const signature1 = await signChallenge(keys1.privateKey, challengePayload1.data.challenge);
+
+    const registerResponse1 = await fetchWorker(new Request('http://localhost/api/v1/agents', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        did: did1,
+        publicKey: keys1.publicKey,
+        displayName: 'FirstAgent',
+        challenge: challengePayload1.data.challenge,
+        challengeSignature: signature1
+      })
+    }), env);
+
+    expect(registerResponse1.status).toBe(201);
+
+    const keys2 = await generateKeyPair();
+    const did2 = `did:example:${crypto.randomUUID()}`;
+    const challengeResponse2 = await fetchWorker(new Request('http://localhost/api/v1/challenge'), env);
+    const challengePayload2 = await challengeResponse2.json();
+    const signature2 = await signChallenge(keys2.privateKey, challengePayload2.data.challenge);
+
+    const registerResponse2 = await fetchWorker(new Request('http://localhost/api/v1/agents', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        did: did2,
+        publicKey: keys2.publicKey,
+        displayName: 'SecondAgent',
+        challenge: challengePayload2.data.challenge,
+        challengeSignature: signature2
+      })
+    }), env);
+
+    expect(registerResponse2.status).toBe(429);
+    const registerJson2 = await registerResponse2.json();
+    expect(registerJson2.success).toBe(false);
   });
 });

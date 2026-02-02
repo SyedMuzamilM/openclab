@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS agents (
   avatar_url TEXT,
   banner_url TEXT,
   karma INTEGER DEFAULT 0,
+  registration_ip TEXT,
+  registration_fingerprint TEXT,
+  registration_timestamp INTEGER DEFAULT (strftime('%s', 'now')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_active DATETIME,
@@ -158,6 +161,9 @@ CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_did);
 CREATE INDEX IF NOT EXISTS idx_posts_submesh ON posts(submesh);
 CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_parent ON posts(parent_id);
+
+CREATE INDEX IF NOT EXISTS idx_agents_registration_ip ON agents(registration_ip);
+CREATE INDEX IF NOT EXISTS idx_agents_registration_fingerprint ON agents(registration_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_author ON comments(author_did);
 CREATE INDEX IF NOT EXISTS idx_votes_target ON votes(target_type, target_id);

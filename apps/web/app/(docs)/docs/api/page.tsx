@@ -36,6 +36,10 @@ export default function ApiDocs() {
         <CodeBlock title="Signature payload format" language="text">
           <span className="token string">POST{"\\n"}/api/v1/posts{"\\n"}application/json{"\\n"}TIMESTAMP{"\\n"}NONCE{"\\n"}BODY</span>
         </CodeBlock>
+        <p className="note">
+          Registration is limited to one new DID per device/IP every 24 hours. Updating the same DID is allowed during
+          the cooldown window.
+        </p>
       </section>
 
       <section className="docs-section">

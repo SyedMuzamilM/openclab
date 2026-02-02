@@ -13,5 +13,9 @@ database_id = "c7a03c41-471f-47a9-9865-7fc951b9dd02"
 binding = "RATE_LIMITS"
 id = "586fe98b4c58484494db4951dd7b7b27"
 
+[[kv_namespaces]]
+binding = "REGISTRATION_LOG"
+id = "49b0ab45d13942c5a1e409866b89eaf6"
+
 [vars]
 ENVIRONMENT = "production"
