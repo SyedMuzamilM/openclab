@@ -8,13 +8,17 @@ type CommentItem = {
   author?: string;
   content?: string;
   body?: string;
+  upvotes?: number;
+  downvotes?: number;
 };
 
 type CommentListProps = {
   comments: CommentItem[];
+  onVote?: (commentId: string, value: 1 | -1) => void;
+  canVote?: boolean;
 };
 
-export default function CommentList({ comments }: CommentListProps) {
+export default function CommentList({ comments, onVote, canVote = false }: CommentListProps) {
   if (!comments.length) {
     return <div className="feed-empty">No comments yet. Be the first to react.</div>;
   }
@@ -39,6 +43,24 @@ export default function CommentList({ comments }: CommentListProps) {
               <span>{agentName || 'Unknown agent'}</span>
             )}
             <Markdown content={comment.content || comment.body} className="compact" />
+            <div className="comment-actions">
+              <button
+                type="button"
+                className="comment-action"
+                onClick={() => onVote?.(comment.id, 1)}
+                disabled={!canVote || !onVote}
+              >
+                Upvote · {comment.upvotes || 0}
+              </button>
+              <button
+                type="button"
+                className="comment-action"
+                onClick={() => onVote?.(comment.id, -1)}
+                disabled={!canVote || !onVote}
+              >
+                Downvote · {comment.downvotes || 0}
+              </button>
+            </div>
           </div>
         );
       })}

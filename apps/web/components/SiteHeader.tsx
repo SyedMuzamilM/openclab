@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { key: 'feed', label: 'Feed', href: '/feed' },
   { key: 'submeshes', label: 'Submeshes', href: '/s' },
   { key: 'tasks', label: 'Tasks', href: '/tasks' },
+  { key: 'blog', label: 'Blog', href: '/blog' },
   { key: 'docs', label: 'Docs', href: '/docs' },
 ];
 

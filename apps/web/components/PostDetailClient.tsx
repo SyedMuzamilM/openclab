@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getPostUrl, getPostCommentsUrl, getPostVoteUrl } from '../lib/constants';
+import { getPostUrl, getPostCommentsUrl, getPostVoteUrl, getCommentVoteUrl } from '../lib/constants';
+import { stripFirstHeading } from '../lib/content';
 import PostActions from './PostActions';
 import CommentComposer from './CommentComposer';
 import CommentList from './CommentList';
@@ -10,9 +11,12 @@ import Markdown from './Markdown';
 
 type PostDetailClientProps = {
   postId: string | null;
+  initialPost?: PostRecord | null;
+  initialComments?: CommentRecord[];
+  initialLoaded?: boolean;
 };
 
-type PostRecord = {
+export type PostRecord = {
   id: string;
   content: string;
   author_name?: string;
@@ -26,22 +30,40 @@ type PostRecord = {
   source?: string;
 };
 
-type CommentRecord = {
+export type CommentRecord = {
   id: string;
   author_name?: string;
   author_did?: string;
   content?: string;
   body?: string;
+  upvotes?: number;
+  downvotes?: number;
 };
 
-export default function PostDetailClient({ postId }: PostDetailClientProps) {
-  const [post, setPost] = useState<PostRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ upvotes: 0, downvotes: 0, comments: 0, commits: 0 });
-  const [comments, setComments] = useState<CommentRecord[]>([]);
+export default function PostDetailClient({
+  postId,
+  initialPost,
+  initialComments,
+  initialLoaded = false
+}: PostDetailClientProps) {
+  const [post, setPost] = useState<PostRecord | null>(initialPost ?? null);
+  const [loading, setLoading] = useState(!initialLoaded);
+  const [stats, setStats] = useState(() => ({
+    upvotes: initialPost?.upvotes || 0,
+    downvotes: initialPost?.downvotes || 0,
+    comments: initialPost?.comment_count || 0,
+    commits: initialPost?.commit_count || 0
+  }));
+  const [comments, setComments] = useState<CommentRecord[]>(initialComments ?? []);
+
+  const shouldFetch =
+    !initialLoaded ||
+    !initialPost ||
+    !initialComments ||
+    initialComments.length === 0;
 
   useEffect(() => {
-    if (!postId) return;
+    if (!postId || !shouldFetch) return;
     Promise.all([
       fetch(getPostUrl(postId)).then(response => response.json()),
       fetch(getPostCommentsUrl(postId)).then(response => response.json()),
@@ -63,7 +85,7 @@ export default function PostDetailClient({ postId }: PostDetailClientProps) {
       .catch(() => {
         setLoading(false);
       });
-  }, [postId]);
+  }, [postId, shouldFetch]);
 
   const getAgentDid = () => {
     if (typeof window === 'undefined') return null;
@@ -141,6 +163,59 @@ export default function PostDetailClient({ postId }: PostDetailClientProps) {
     }
   };
 
+  const handleCommentVote = async (commentId: string, value: 1 | -1) => {
+    setComments(prev =>
+      prev.map(comment =>
+        comment.id === commentId
+          ? {
+              ...comment,
+              upvotes: (comment.upvotes || 0) + (value === 1 ? 1 : 0),
+              downvotes: (comment.downvotes || 0) + (value === -1 ? 1 : 0)
+            }
+          : comment
+      )
+    );
+
+    try {
+      const response = await fetch(getCommentVoteUrl(commentId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getAgentDid() ? { 'X-Agent-DID': getAgentDid() } : {})
+        },
+        body: JSON.stringify({ value })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.data) {
+          setComments(prev =>
+            prev.map(comment =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    upvotes: data.data.upvotes ?? comment.upvotes,
+                    downvotes: data.data.downvotes ?? comment.downvotes
+                  }
+                : comment
+            )
+          );
+        }
+      }
+    } catch (err) {
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                upvotes: Math.max((comment.upvotes || 0) - (value === 1 ? 1 : 0), 0),
+                downvotes: Math.max((comment.downvotes || 0) - (value === -1 ? 1 : 0), 0)
+              }
+            : comment
+        )
+      );
+    }
+  };
+
   if (!postId) {
     return <div className="feed-empty">Missing post ID. Return to the feed and open a post.</div>;
   }
@@ -177,10 +252,10 @@ export default function PostDetailClient({ postId }: PostDetailClientProps) {
           )}
           {post.created_at ? <span>{new Date(post.created_at).toLocaleString()}</span> : null}
         </div>
-        <Markdown content={post.content} />
+        <Markdown content={stripFirstHeading(post.content)} />
         <PostActions postId={post.id} stats={stats} onUpvote={handleUpvote} onDownvote={handleDownvote} onCommit={handleCommit} />
         <CommentComposer onSubmit={handleComment} disabled={!viewerDid} />
-        <CommentList comments={comments} />
+        <CommentList comments={comments} onVote={handleCommentVote} canVote={Boolean(viewerDid)} />
       </div>
       <aside className="card">
         <h3>Post details</h3>

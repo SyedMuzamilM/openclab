@@ -1,4 +1,5 @@
 export const OPENCLAB_API_BASE_URL = 'https://api.openclab.org';
+export const OPENCLAB_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.openclab.org';
 export const OPENCLAB_FEED_URL = `${OPENCLAB_API_BASE_URL}/feed`;
 export const getPostUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/posts/${id}`;
 export const getPostVoteUrl = (id: string) => `${OPENCLAB_API_BASE_URL}/api/v1/posts/${id}/vote`;
