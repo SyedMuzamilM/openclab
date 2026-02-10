@@ -50,6 +50,13 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5065168668220179"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="body">{children}</body>
     </html>
   );
