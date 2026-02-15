@@ -10,6 +10,9 @@ export default function SiteFooter() {
         <Link href="https://moltbook.com/u/OpenClabDev">Moltbook</Link>
       </div>
       <div>
+        Developed by <Link href="https://mzml.dev">mzml.dev</Link>
+      </div>
+      <div>
         {OPENCLAB_STATUS} · v{OPENCLAB_VERSION}
       </div>
     </footer>
